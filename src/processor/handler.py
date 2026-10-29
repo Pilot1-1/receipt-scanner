@@ -69,6 +69,11 @@ def process(bucket, key):
         "createdAt": existing.get("createdAt", now),
         "updatedAt": now,
     }
+    # The API stored the owner when it issued the upload link. put_item below
+    # replaces the whole row, so carry it over or the receipt would disappear
+    # from its owner's list.
+    if "userId" in existing:
+        item["userId"] = existing["userId"]
     try:
         obj = s3.get_object(Bucket=bucket, Key=key)
         if obj["ContentLength"] > MAX_BYTES:

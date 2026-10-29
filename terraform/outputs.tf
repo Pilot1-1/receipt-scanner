@@ -17,3 +17,18 @@ output "gemini_key_parameter" {
   description = "SSM parameter that must hold the Gemini API key"
   value       = module.processor.key_parameter_name
 }
+
+output "api_url" {
+  description = "Base URL of the HTTP API (POST /upload-url, GET /receipts); every call needs a sign-in token"
+  value       = module.api.api_url
+}
+
+output "user_pool_id" {
+  description = "Cognito user pool that holds the accounts"
+  value       = module.auth.user_pool_id
+}
+
+output "user_pool_client_id" {
+  description = "Cognito app client the website (or the CLI) signs in with"
+  value       = module.auth.client_id
+}

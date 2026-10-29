@@ -13,3 +13,8 @@ output "table_name" {
 output "table_arn" {
   value = aws_dynamodb_table.receipts.arn
 }
+
+output "user_index_name" {
+  description = "Index that lists receipts by owner, newest first"
+  value       = local.user_index
+}

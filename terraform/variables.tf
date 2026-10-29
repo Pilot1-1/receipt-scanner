@@ -20,3 +20,15 @@ variable "gemini_model" {
   type        = string
   default     = "gemini-2.5-flash-lite"
 }
+
+variable "allow_self_signup" {
+  description = "true: anyone can register an account; false: only you can create accounts"
+  type        = bool
+  default     = false
+}
+
+variable "allowed_origins" {
+  description = "Websites allowed to call the API from a browser. Set to your site's address once it exists."
+  type        = list(string)
+  default     = ["*"]
+}
