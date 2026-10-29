@@ -90,11 +90,12 @@ def process(bucket, key):
             category=data["category"],
         )
     except urllib.error.HTTPError as error:
-        logger.warning("Gemini HTTP %s for %s", error.code, key)
+        details = error.read().decode("utf-8", errors="replace")[:300]
+        logger.warning("Gemini HTTP %s (model %s) for %s: %s", error.code, MODEL, key, details)
         message = (
             "Gemini rate limit reached, try again later"
             if error.code == 429
-            else f"Gemini error {error.code}"
+            else f"Gemini error {error.code} (model {MODEL})"
         )
         item.update(status="failed", error=message)
     except ValueError as error:  # expected problems: not a receipt, wrong type, too big
