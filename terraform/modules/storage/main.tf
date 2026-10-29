@@ -1,0 +1,39 @@
+data "aws_caller_identity" "current" {}
+
+locals {
+  prefix = "${var.project_name}-${var.environment}"
+}
+
+# Receipt photos. The account id in the name keeps it globally unique.
+resource "aws_s3_bucket" "receipts" {
+  bucket = "${local.prefix}-receipts-${data.aws_caller_identity.current.account_id}"
+
+  # Lets "terraform destroy" delete the bucket even if it contains photos.
+  # Fine for a student project; do not use this for real user data.
+  force_destroy = true
+}
+
+# Receipts are private: nobody can make this bucket public by accident.
+resource "aws_s3_bucket_public_access_block" "receipts" {
+  bucket = aws_s3_bucket.receipts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Parsed receipts (store, date, total, category, status).
+# 5 read / 5 write units stays inside the always-free DynamoDB allowance.
+resource "aws_dynamodb_table" "receipts" {
+  name           = "${local.prefix}-receipts"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 5
+  write_capacity = 5
+  hash_key       = "receiptId"
+
+  attribute {
+    name = "receiptId"
+    type = "S"
+  }
+}
