@@ -27,3 +27,15 @@ module "storage" {
   project_name = var.project_name
   environment  = var.environment
 }
+
+module "processor" {
+  source       = "./modules/processor"
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+  bucket_name  = module.storage.bucket_name
+  bucket_arn   = module.storage.bucket_arn
+  table_name   = module.storage.table_name
+  table_arn    = module.storage.table_arn
+  gemini_model = var.gemini_model
+}

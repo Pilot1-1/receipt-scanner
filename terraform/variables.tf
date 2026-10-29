@@ -14,3 +14,9 @@ variable "environment" {
   description = "Environment name (dev or prod); set in envs/<name>.tfvars"
   type        = string
 }
+
+variable "gemini_model" {
+  description = "Gemini model used to read receipts"
+  type        = string
+  default     = "gemini-2.5-flash-lite"
+}
