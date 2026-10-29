@@ -24,6 +24,20 @@ resource "aws_s3_bucket_public_access_block" "receipts" {
   restrict_public_buckets = true
 }
 
+# The browser uploads photos straight to S3 with a presigned URL. That is a
+# cross-origin PUT (website -> S3), so the bucket must say the website may do it.
+# Without this block the browser refuses the upload, even though curl works.
+resource "aws_s3_bucket_cors_configuration" "receipts" {
+  bucket = aws_s3_bucket.receipts.id
+
+  cors_rule {
+    allowed_methods = ["PUT"]
+    allowed_origins = var.allowed_origins
+    allowed_headers = ["*"]
+    max_age_seconds = 3600
+  }
+}
+
 # Parsed receipts (store, date, total, category, status).
 # 5 read / 5 write units stays inside the always-free DynamoDB allowance.
 resource "aws_dynamodb_table" "receipts" {

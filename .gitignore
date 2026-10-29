@@ -6,3 +6,6 @@
 tfplan
 .env
 *.zip
+node_modules/
+frontend/dist/
+frontend/public/config.json

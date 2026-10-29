@@ -1,0 +1,7 @@
+{
+  "region": "eu-north-1",
+  "apiUrl": "https://xxxxxxxxxx.execute-api.eu-north-1.amazonaws.com",
+  "userPoolId": "eu-north-1_xxxxxxxxx",
+  "clientId": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "allowSignup": false
+}

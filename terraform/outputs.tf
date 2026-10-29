@@ -1,3 +1,8 @@
+output "site_url" {
+  description = "Address of the website (open this in the browser)"
+  value       = local.site_url
+}
+
 output "receipts_bucket" {
   description = "S3 bucket that stores uploaded receipt photos"
   value       = module.storage.bucket_name
@@ -31,4 +36,9 @@ output "user_pool_id" {
 output "user_pool_client_id" {
   description = "Cognito app client the website (or the CLI) signs in with"
   value       = module.auth.client_id
+}
+
+output "frontend_config" {
+  description = "Same settings the site reads from /config.json. Save it to frontend/public/config.json to run the site locally."
+  value       = local.frontend_config
 }

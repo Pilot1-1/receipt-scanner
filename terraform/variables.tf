@@ -27,8 +27,8 @@ variable "allow_self_signup" {
   default     = false
 }
 
-variable "allowed_origins" {
-  description = "Websites allowed to call the API from a browser. Set to your site's address once it exists."
+variable "dev_origins" {
+  description = "Extra websites allowed to call the API and upload to S3 from a browser: the local Vite server. Use [] in prod. The CloudFront site is always allowed."
   type        = list(string)
-  default     = ["*"]
+  default     = ["http://localhost:5173"]
 }
