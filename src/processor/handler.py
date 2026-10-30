@@ -48,6 +48,17 @@ def to_decimal(value):
     return None if value is None else Decimal(str(value))
 
 
+def to_dynamo(value):
+    """Same, for a whole structure: floats inside lists and dicts become Decimal too."""
+    if isinstance(value, float):
+        return Decimal(str(value))
+    if isinstance(value, list):
+        return [to_dynamo(entry) for entry in value]
+    if isinstance(value, dict):
+        return {key: to_dynamo(entry) for key, entry in value.items()}
+    return value
+
+
 def lambda_handler(event, context):
     for record in event.get("Records", []):
         bucket = record["s3"]["bucket"]["name"]
@@ -93,6 +104,7 @@ def process(bucket, key):
             total=to_decimal(data["total"]),
             currency=data["currency"],
             category=data["category"],
+            items=to_dynamo(data["items"]),
         )
     except urllib.error.HTTPError as error:
         details = error.read().decode("utf-8", errors="replace")[:300]

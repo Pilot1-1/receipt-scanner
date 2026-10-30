@@ -39,7 +39,7 @@ URL_TTL_SECONDS = 300
 MAX_ITEMS = 200
 PUBLIC_FIELDS = (
     "receiptId", "status", "createdAt", "store",
-    "date", "total", "currency", "category", "error",
+    "date", "total", "currency", "category", "items", "error",
 )
 
 

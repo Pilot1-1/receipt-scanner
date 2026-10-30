@@ -8,6 +8,8 @@
   --accent: #2b3fd4;
   --ok: #1a7a4c;
   --bad: #b3261e;
+  --ok-soft: #e8f5ee;
+  --bad-soft: #fdeceb;
   --text: "Bricolage Grotesque Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   color-scheme: light;
@@ -103,10 +105,15 @@ input:disabled { background: var(--page); color: var(--muted); }
 
 .receipts { margin-top: 2.5rem; }
 .receipts h2 { margin-bottom: 0.5rem; }
-.receipts li {
+.receipts > .note { margin-bottom: 0.75rem; }
+.receipts li { border-top: 1px solid var(--line); }
+.r-row {
   display: grid; grid-template-columns: 7rem 1fr 9rem 9rem; gap: 1rem; align-items: center;
-  padding: 0.8rem 0; border-top: 1px solid var(--line);
+  padding: 0.8rem 0.5rem; margin: 0 -0.5rem; width: calc(100% + 1rem);
 }
+/* A finished receipt is a button: click it to see the products. */
+button.r-row { background: none; border: 0; border-radius: 8px; text-align: left; color: inherit; font: inherit; }
+button.r-row:hover { background: #f4f6fa; }
 .r-date { font: 400 0.85rem var(--mono); color: var(--muted); }
 .r-store { font-weight: 500; overflow-wrap: anywhere; }
 .r-store small { display: block; font-weight: 400; color: var(--bad); font-size: 0.85rem; }
@@ -129,7 +136,7 @@ input:disabled { background: var(--page); color: var(--muted); }
   .app { padding: 0 1rem 3rem; }
   .panel { padding: 1.1rem; }
   .ledger li { grid-template-columns: 12px 1fr auto auto; gap: 0.6rem; }
-  .receipts li {
+  .r-row {
     grid-template-columns: 1fr auto; row-gap: 0.25rem;
     grid-template-areas: "store amount" "date cat";
   }
@@ -139,4 +146,71 @@ input:disabled { background: var(--page); color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   .tape span { transition: none; }
   .state.busy i { animation: none; }
+}
+
+/* ---------- price changes: list icons, banners, receipt window ---------- */
+.chips { display: inline-flex; gap: 0.3rem; margin-left: 0.55rem; vertical-align: 1px; }
+.chip {
+  display: inline-block; border: 1px solid currentColor; border-radius: 999px; padding: 0 0.5rem;
+  font: 500 0.78rem/1.55 var(--mono); white-space: nowrap;
+}
+.chip.up { color: var(--bad); }
+.chip.down { color: var(--ok); }
+
+.notices { display: grid; gap: 0.6rem; margin-bottom: 1rem; }
+.notices:empty { display: none; }
+.notice {
+  display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--paper); font-size: 0.95rem;
+}
+.notice p { flex: 1; }
+.notice[data-tone="good"] { background: var(--ok-soft); border-color: #b9dfca; }
+.notice[data-tone="bad"] { background: var(--bad-soft); border-color: #f0c4c0; }
+.notice .link { white-space: nowrap; }
+.notice .x { background: none; border: 0; padding: 0 0.3rem; font-size: 1.3rem; line-height: 1; color: var(--muted); }
+.notice .x:hover { color: var(--ink); }
+
+.detail {
+  width: min(820px, calc(100vw - 1.5rem)); max-height: calc(100vh - 2rem); padding: 0; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--ink);
+}
+.detail::backdrop { background: rgba(22, 33, 44, 0.45); }
+.detail-body { padding: 1.5rem; max-height: calc(100vh - 2rem); overflow: auto; }
+.detail-head { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: start; margin-bottom: 1.25rem; }
+.detail-head h2 { font-size: 1.4rem; overflow-wrap: anywhere; }
+.detail-sub { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; font-size: 0.92rem; }
+.detail-head .detail-total { font-size: 1.45rem; padding-top: 0.15rem; }
+
+.table-wrap { overflow-x: auto; }
+.lines { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 0.93rem; }
+.lines th {
+  text-align: left; font-weight: 500; font-size: 0.82rem; color: var(--muted);
+  padding: 0 0.6rem 0.5rem; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.lines td { padding: 0.65rem 0.6rem; border-top: 1px solid var(--line-soft); vertical-align: top; }
+.lines th:first-child, .lines td:first-child { padding-left: 0; }
+.lines .name { overflow-wrap: anywhere; }
+.lines th.num { text-align: right; }
+.lines td.num { text-align: right; font: 400 0.88rem var(--mono); white-space: nowrap; }
+.change { display: block; font: 500 0.88rem var(--mono); }
+.change.up { color: var(--bad); }
+.change.down { color: var(--ok); }
+.change.same, .change.new { color: var(--muted); font-weight: 400; }
+.change small { display: block; margin-top: 0.1rem; font: 400 0.78rem/1.35 var(--text); color: var(--muted); }
+.detail-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin-top: 1rem; font-size: 0.93rem; }
+.detail-body > .note { margin-top: 0.8rem; }
+
+@media (max-width: 640px) {
+  .notice { flex-wrap: wrap; }
+  .detail-body { padding: 1.1rem; }
+  .detail-head { grid-template-columns: 1fr auto; }
+  .detail-head .detail-total { grid-column: 1; grid-row: 2; }
+  /* No room for columns: each product becomes a small block (name, unit price, price change). */
+  .lines, .lines tbody, .lines tr, .lines td { display: block; min-width: 0; }
+  .lines thead, .lines td:nth-child(2), .lines td:nth-child(4) { display: none; }
+  .lines tr { padding: 0.75rem 0; border-top: 1px solid var(--line-soft); }
+  .lines td { padding: 0.1rem 0; border: 0; }
+  .lines td:first-child { font-weight: 500; }
+  .lines td.num { text-align: left; white-space: normal; }
+  .lines td:nth-child(3)::before { content: "Unit price "; font-family: var(--text); color: var(--muted); }
 }
