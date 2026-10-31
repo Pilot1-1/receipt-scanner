@@ -12,6 +12,16 @@ terraform {
 
 locals {
   name = "${var.project_name}-${var.environment}-api"
+
+  # Routes added after the first version. The two original routes (POST /upload-url, GET /receipts)
+  # keep their own resources below, so Terraform does not recreate them.
+  extra_routes = toset([
+    "GET /receipts/{id}/image", # temporary link to the original photo
+    "PATCH /receipts/{id}",     # correct what the model got wrong
+    "DELETE /receipts/{id}",    # delete a receipt and its photo
+    "GET /budgets",             # monthly limits
+    "PUT /budgets",
+  ])
 }
 
 data "archive_file" "api" {
@@ -56,9 +66,17 @@ data "aws_iam_policy_document" "permissions" {
     resources = ["${var.bucket_arn}/uploads/*"]
   }
 
+  # Same rule for the temporary "view photo" link; deleting a receipt also removes its photo.
   statement {
-    sid       = "CreateReceipts"
-    actions   = ["dynamodb:PutItem"]
+    sid       = "ViewAndDeleteReceiptPhotos"
+    actions   = ["s3:GetObject", "s3:DeleteObject"]
+    resources = ["${var.bucket_arn}/uploads/*"]
+  }
+
+  # GetItem: look a receipt up (and check its owner) before touching it.
+  statement {
+    sid       = "ManageReceipts"
+    actions   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem"]
     resources = [var.table_arn]
   }
 
@@ -67,6 +85,12 @@ data "aws_iam_policy_document" "permissions" {
     sid       = "ListOwnReceipts"
     actions   = ["dynamodb:Query"]
     resources = ["${var.table_arn}/index/${var.user_index_name}"]
+  }
+
+  statement {
+    sid       = "ReadWriteBudgets"
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem"]
+    resources = [var.budgets_table_arn]
   }
 }
 
@@ -89,9 +113,10 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      TABLE_NAME  = var.table_name
-      BUCKET_NAME = var.bucket_name
-      INDEX_NAME  = var.user_index_name
+      TABLE_NAME    = var.table_name
+      BUCKET_NAME   = var.bucket_name
+      INDEX_NAME    = var.user_index_name
+      BUDGETS_TABLE = var.budgets_table_name
     }
   }
 
@@ -104,9 +129,11 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 
   # Lets the website (another domain) call this API from the browser.
+  # PATCH, PUT and DELETE are not "simple" methods: without them in this list the browser's
+  # preflight request fails and the call never reaches the API.
   cors_configuration {
     allow_origins = var.allowed_origins
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
     max_age       = 3600
   }
@@ -146,6 +173,18 @@ resource "aws_apigatewayv2_route" "upload_url" {
 resource "aws_apigatewayv2_route" "receipts" {
   api_id    = aws_apigatewayv2_api.api.id
   route_key = "GET /receipts"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+}
+
+# Every route requires a valid sign-in token, exactly like the two above.
+resource "aws_apigatewayv2_route" "extra" {
+  for_each = local.extra_routes
+
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 
   authorization_type = "JWT"

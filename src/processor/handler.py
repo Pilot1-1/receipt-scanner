@@ -13,6 +13,7 @@ from decimal import Decimal
 from urllib.parse import unquote_plus
 
 import boto3
+from botocore.exceptions import ClientError
 
 from gemini_client import extract_receipt
 
@@ -68,7 +69,12 @@ def lambda_handler(event, context):
 
 def process(bucket, key):
     receipt_id = os.path.splitext(os.path.basename(key))[0]
-    existing = table.get_item(Key={"receiptId": receipt_id}).get("Item", {})
+    existing = table.get_item(Key={"receiptId": receipt_id}).get("Item")
+    if not existing:
+        # The API creates the row before it hands out the upload link, so a missing row means the
+        # person deleted the receipt in the meantime. Do not spend a Gemini request on it.
+        logger.info("Receipt %s was deleted or never registered, skipping", receipt_id)
+        return
     if existing.get("status") == "done":
         logger.info("Receipt %s already processed, skipping", receipt_id)
         return
@@ -122,5 +128,13 @@ def process(bucket, key):
         logger.exception("Failed to process %s", key)
         item.update(status="failed", error=str(error)[:200])
 
-    table.put_item(Item=item)
+    try:
+        # Reading takes a few seconds. If the person deleted the receipt meanwhile, the row is gone and
+        # this write must not bring it back (it would be an orphan without an owner).
+        table.put_item(Item=item, ConditionExpression="attribute_exists(receiptId)")
+    except ClientError as error:
+        if error.response["Error"]["Code"] != "ConditionalCheckFailedException":
+            raise
+        logger.info("Receipt %s was deleted while it was being read, result dropped", receipt_id)
+        return
     logger.info("Receipt %s -> %s", receipt_id, item["status"])

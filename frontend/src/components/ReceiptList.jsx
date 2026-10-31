@@ -20,20 +20,23 @@ function Chips({ trend }) {
   );
 }
 
-export default function ReceiptList({ receipts, error, trends, onOpen }) {
+/**
+ * A list of receipts. `receipts` is what to show (already filtered or shortened); `totalCount` is how many
+ * exist, so an empty list can say "nothing yet" or "nothing matches".
+ */
+export default function ReceiptList({ receipts, totalCount, error, trends, onOpen }) {
   const canOpen = (r) => r.status === "done" && typeof r.total === "number";
   const anyLines = receipts?.some(hasLines);
 
   return (
-    <section className="receipts" aria-labelledby="receipts-title">
-      <h2 id="receipts-title">Receipts</h2>
+    <div className="receipt-list">
       {anyLines && <p className="note">Click a receipt to see what you bought and how the prices changed.</p>}
       {error && <p className="error" role="alert">Could not refresh: {error}</p>}
 
       {receipts === null ? (
         <p className="muted">Loading…</p>
       ) : receipts.length === 0 ? (
-        <p className="empty">No receipts yet.</p>
+        <p className="empty">{totalCount === 0 ? "No receipts yet. Add your first photo above." : "No receipts match these filters."}</p>
       ) : (
         <ul>
           {receipts.map((r) => {
@@ -62,6 +65,6 @@ export default function ReceiptList({ receipts, error, trends, onOpen }) {
           })}
         </ul>
       )}
-    </section>
+    </div>
   );
 }

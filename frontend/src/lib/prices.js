@@ -11,6 +11,7 @@ const dayOf = (receipt) => receipt.date || (receipt.createdAt || "").slice(0, 10
 
 // When it was bought: the day on the paper first, then the upload time to order receipts of the same day.
 const orderOf = (receipt) => `${dayOf(receipt)}|${receipt.createdAt || ""}`;
+const byOrder = (a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0);
 
 // "No unit" is treated as unknown and matches anything; two known units must be equal (kg is not pcs).
 const sameUnit = (a, b) => !a || !b || a === b;
@@ -18,6 +19,9 @@ const sameUnit = (a, b) => !a || !b || a === b;
 export const lineId = (item) => `${item.key}|${item.unit || ""}`;
 
 export const hasLines = (receipt) => receipt.status === "done" && Array.isArray(receipt.items) && receipt.items.length > 0;
+
+// "/ kg" after the unit price of goods sold by weight or volume; nothing for pieces.
+export const perUnit = (unit) => (unit && unit !== "pcs" ? ` / ${unit}` : "");
 
 /**
  * One entry per product in a receipt, with duplicate lines added up (three identical lines of
@@ -59,7 +63,7 @@ export function buildIndex(receipts) {
       });
     }
   }
-  for (const list of index.values()) list.sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0));
+  for (const list of index.values()) list.sort(byOrder);
   return index;
 }
 
@@ -104,6 +108,54 @@ export function compareReceipt(receipt, index) {
   });
 }
 
+/**
+ * Every product bought in one currency, with its whole price history (for the Products tab).
+ * A product is one key + unit, as in the receipt window, so "milk per l" and "milk per pcs" stay apart.
+ *   history: purchases, oldest first: { receiptId, store, day, quantity, price, unitPrice, name }
+ *   change:  last unit price / first unit price - 1 (null if bought only once)
+ *   lowest / highest: the cheapest and the dearest purchase
+ */
+export function buildProducts(receipts, currency) {
+  const products = new Map();
+  for (const receipt of receipts) {
+    if (receipt.status !== "done" || (receipt.currency || "?") !== currency) continue;
+    for (const purchase of purchasesOf(receipt)) {
+      const product = products.get(purchase.id) || { id: purchase.id, key: purchase.key, unit: purchase.unit, history: [] };
+      product.history.push({
+        receiptId: receipt.receiptId,
+        store: receipt.store || "Unknown store",
+        day: dayOf(receipt),
+        order: orderOf(receipt),
+        name: purchase.name,
+        quantity: purchase.quantity,
+        price: purchase.price,
+        unitPrice: purchase.unitPrice,
+      });
+      products.set(purchase.id, product);
+    }
+  }
+
+  return [...products.values()].map((product) => {
+    const history = [...product.history].sort(byOrder);
+    const first = history[0];
+    const last = history[history.length - 1];
+    const lowest = history.reduce((best, p) => (p.unitPrice < best.unitPrice ? p : best), first);
+    const highest = history.reduce((best, p) => (p.unitPrice > best.unitPrice ? p : best), first);
+    return {
+      ...product,
+      name: last.name, // the spelling on the latest receipt
+      history,
+      count: history.length,
+      first,
+      last,
+      lowest,
+      highest,
+      spent: history.reduce((sum, p) => sum + p.price, 0),
+      change: history.length > 1 ? last.unitPrice / first.unitPrice - 1 : null,
+    };
+  });
+}
+
 /** Counts per trend, how many products could be compared, and the money difference at last prices. */
 export function summarizeComparison(lines) {
   const summary = { up: 0, down: 0, same: 0, new: 0, compared: 0, saved: 0 };
@@ -123,6 +175,9 @@ export function formatChange(change) {
   const percent = Math.round(Math.abs(change) * 1000) / 10;
   return `${change > 0 ? "+" : "−"}${percent}%`;
 }
+
+/** "up" | "down" | "same" for a change in price, using the same 2% threshold as everywhere else. */
+export const trendOf = (change) => (change === null ? "same" : change > MIN_CHANGE ? "up" : change < -MIN_CHANGE ? "down" : "same");
 
 /**
  * Do the product lines add up to the receipt total? A small gap is normal (rounding, discounts, a

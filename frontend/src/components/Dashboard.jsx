@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Brand from "./Brand";
 import Breakdown from "./Breakdown";
+import Budgets from "./Budgets";
+import { CurrencySwitch, PeriodSelect } from "./Controls";
 import Notices from "./Notices";
+import ProductsTab from "./ProductsTab";
 import ReceiptDetail from "./ReceiptDetail";
+import ReceiptFilters from "./ReceiptFilters";
 import ReceiptList from "./ReceiptList";
+import SpendChart from "./SpendChart";
+import StatCards from "./StatCards";
+import Tabs from "./Tabs";
 import Uploader from "./Uploader";
-import { SessionExpiredError, listReceipts } from "../lib/api";
-import { buildIndex, compareReceipt, hasLines, summarizeComparison } from "../lib/prices";
-import { currenciesOf, isPending, summarize } from "../lib/stats";
+import { SessionExpiredError, getBudgets, listReceipts, saveBudgets } from "../lib/api";
+import { downloadCsv, receiptsToCsv } from "../lib/csv";
+import { DEFAULT_FILTERS, filterReceipts } from "../lib/filters";
+import { buildIndex, buildProducts, compareReceipt, hasLines, summarizeComparison } from "../lib/prices";
+import { DEFAULT_PERIOD, bestCurrency, currenciesOf, isPending, overview, summarize } from "../lib/stats";
 
 const POLL_MS = 3000;
 const MAX_NOTICES = 3;
+const RECENT = 5; // receipts shown on the Overview tab
 
 /** A banner for a receipt that was just read, or null if none of its products has an earlier price to compare. */
 function noticeFor(receipt, index) {
@@ -23,9 +33,13 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
   const [receipts, setReceipts] = useState(null); // null = first load
   const [loadError, setLoadError] = useState("");
   const [currency, setCurrency] = useState(null);
-  const [period, setPeriod] = useState("all");
+  const [period, setPeriod] = useState(DEFAULT_PERIOD); // the site opens on "this month"
+  const [tab, setTab] = useState("overview");
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [openId, setOpenId] = useState(null);
   const [notices, setNotices] = useState([]);
+  const [budgets, setBudgets] = useState(null); // null = loading
+  const [budgetsError, setBudgetsError] = useState("");
   const reading = useRef(new Set());  // receipts that showed "Reading…" at the last refresh
   const announced = useRef(new Set()); // receipts that already got a banner
 
@@ -55,6 +69,27 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // The monthly limits are loaded once; they only change when the person saves them.
+  useEffect(() => {
+    let cancelled = false;
+    getBudgets()
+      .then((loaded) => { if (!cancelled) setBudgets(loaded); })
+      .catch((error) => {
+        if (error instanceof SessionExpiredError) onExpired();
+        else if (!cancelled) setBudgetsError(error.message);
+      });
+    return () => { cancelled = true; };
+  }, [onExpired]);
+
+  const saveBudget = useCallback(async (code, limits) => {
+    try {
+      setBudgets(await saveBudgets(code, limits));
+    } catch (error) {
+      if (error instanceof SessionExpiredError) onExpired();
+      throw error;
+    }
+  }, [onExpired]);
+
   // While Gemini is still reading something, check again every few seconds.
   const waiting = receipts?.some(isPending);
   useEffect(() => {
@@ -64,11 +99,19 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
   }, [waiting, refresh]);
 
   const currencies = useMemo(() => currenciesOf(receipts || []), [receipts]);
-  const active = currencies.includes(currency) ? currency : currencies[0];
+  // Until the person picks a currency, show the one with the most receipts in the chosen period.
+  const suggested = useMemo(() => bestCurrency(receipts || [], period), [receipts, period]);
+  const active = currencies.includes(currency) ? currency : suggested;
   const summary = useMemo(() => summarize(receipts || [], active, period), [receipts, active, period]);
+  const stats = useMemo(() => overview(receipts || [], active, period), [receipts, active, period]);
+  const monthSpent = useMemo(
+    () => Object.fromEntries(summarize(receipts || [], active, "month").categories.map((c) => [c.name, c.amount])),
+    [receipts, active]
+  );
 
-  // Price history: built once per refresh, shared by the list icons and the receipt window.
+  // Price history: built once per refresh, shared by the list icons, the receipt window and the Products tab.
   const index = useMemo(() => buildIndex(receipts || []), [receipts]);
+  const products = useMemo(() => buildProducts(receipts || [], active), [receipts, active]);
   const trends = useMemo(() => {
     const result = new Map();
     for (const r of receipts || []) {
@@ -79,9 +122,25 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
     return result;
   }, [receipts, index]);
 
+  const visible = useMemo(() => filterReceipts(receipts || [], filters), [receipts, filters]);
+
   const open = openId && receipts ? receipts.find((r) => r.receiptId === openId) : null;
   const openLines = useMemo(() => (open ? compareReceipt(open, index) : []), [open, index]);
   const dismiss = (id) => setNotices((old) => old.filter((n) => n.receiptId !== id));
+
+  // A deleted receipt disappears from the screen at once; the next refresh confirms it.
+  const removed = useCallback((id) => {
+    setOpenId(null);
+    setReceipts((old) => (old ? old.filter((r) => r.receiptId !== id) : old));
+    setNotices((old) => old.filter((n) => n.receiptId !== id));
+    refresh();
+  }, [refresh]);
+
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "receipts", label: "Receipts", count: receipts?.length },
+    { id: "products", label: "Products", count: receipts ? products.length : undefined },
+  ];
 
   return (
     <div className="app">
@@ -94,20 +153,80 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
       </header>
 
       <Notices notices={notices} onOpen={setOpenId} onDismiss={dismiss} />
+      <Uploader onUploaded={refresh} />
+      <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
       <main>
-        <div className="grid">
-          <Breakdown
-            loading={receipts === null} summary={summary} hasAny={currencies.length > 0}
-            currencies={currencies} currency={active} onCurrency={setCurrency}
-            period={period} onPeriod={setPeriod}
-          />
-          <Uploader onUploaded={refresh} />
+        <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="stack">
+          {tab === "overview" && (
+            <>
+              <div className="toolbar">
+                <h2>Overview</h2>
+                <div className="filters">
+                  <CurrencySwitch currencies={currencies} currency={active} onChange={setCurrency} />
+                  <PeriodSelect period={period} onChange={setPeriod} />
+                </div>
+              </div>
+
+              {receipts !== null && active && (
+                <>
+                  <StatCards stats={stats} period={period} currency={active} />
+                  <SpendChart receipts={receipts} currency={active} period={period} />
+                </>
+              )}
+              <div className="grid">
+                {receipts === null ? (
+                  <p className="muted">Loading your receipts…</p>
+                ) : (
+                  <Breakdown summary={summary} hasAny={currencies.length > 0} currency={active} />
+                )}
+                <Budgets budgets={budgets} error={budgetsError} currency={active} spent={monthSpent} onSave={saveBudget} />
+              </div>
+
+              <section className="panel" aria-labelledby="recent-title">
+                <div className="panel-head">
+                  <h2 id="recent-title">Recent receipts</h2>
+                  {receipts && receipts.length > RECENT && (
+                    <button className="link" onClick={() => setTab("receipts")}>All {receipts.length} receipts</button>
+                  )}
+                </div>
+                <ReceiptList
+                  receipts={receipts && receipts.slice(0, RECENT)} totalCount={receipts?.length}
+                  error={loadError} trends={trends} onOpen={setOpenId}
+                />
+              </section>
+            </>
+          )}
+
+          {tab === "receipts" && (
+            <section className="panel" aria-labelledby="receipts-title">
+              <h2 id="receipts-title">Receipts</h2>
+              {receipts !== null && receipts.length > 0 && (
+                <ReceiptFilters
+                  filters={filters} onChange={setFilters} shown={visible.length} total={receipts.length}
+                  onExport={() => downloadCsv(receiptsToCsv(visible))}
+                />
+              )}
+              <ReceiptList receipts={receipts && visible} totalCount={receipts?.length} error={loadError} trends={trends} onOpen={setOpenId} />
+            </section>
+          )}
+
+          {tab === "products" && (
+            receipts === null ? (
+              <p className="muted">Loading your receipts…</p>
+            ) : (
+              <ProductsTab products={products} currencies={currencies} currency={active} onCurrency={setCurrency} />
+            )
+          )}
         </div>
-        <ReceiptList receipts={receipts} error={loadError} trends={trends} onOpen={setOpenId} />
       </main>
 
-      {open && <ReceiptDetail receipt={open} lines={openLines} onClose={() => setOpenId(null)} />}
+      {open && (
+        <ReceiptDetail
+          receipt={open} lines={openLines} onClose={() => setOpenId(null)}
+          onSaved={refresh} onDeleted={removed} onExpired={onExpired}
+        />
+      )}
     </div>
   );
 }

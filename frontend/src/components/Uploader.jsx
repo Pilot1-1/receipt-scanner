@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { uploadReceipt } from "../lib/api";
 
+/** Always visible above the tabs: a photo can be added from any screen. */
 export default function Uploader({ onUploaded }) {
   const input = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -30,14 +31,17 @@ export default function Uploader({ onUploaded }) {
 
   return (
     <section
-      className={`panel upload${dragging ? " is-dragging" : ""}`}
+      className={`panel upload upload-bar${dragging ? " is-dragging" : ""}`}
       aria-labelledby="add-receipt"
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={drop}
     >
-      <h2 id="add-receipt">Add a receipt</h2>
-      <p className="muted">Take a photo or drop one here. Make sure the total is in frame and readable.</p>
+      <div className="upload-text">
+        <h2 id="add-receipt">Add a receipt</h2>
+        <p className="muted">Take a photo or drop one here. Make sure the total is in frame and readable.</p>
+        {status.error && <p className="error" role="alert">{status.error}</p>}
+      </div>
 
       <input
         ref={input} type="file" hidden multiple accept="image/jpeg,image/png,image/webp"
@@ -46,7 +50,6 @@ export default function Uploader({ onUploaded }) {
       <button className="primary" disabled={status.busy} onClick={() => input.current.click()}>
         {status.busy ? status.text : "Choose photos"}
       </button>
-      {status.error && <p className="error" role="alert">{status.error}</p>}
     </section>
   );
 }

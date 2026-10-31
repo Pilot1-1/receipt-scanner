@@ -66,17 +66,19 @@ module "auth" {
 }
 
 module "api" {
-  source          = "./modules/api"
-  project_name    = var.project_name
-  environment     = var.environment
-  bucket_name     = module.storage.bucket_name
-  bucket_arn      = module.storage.bucket_arn
-  table_name      = module.storage.table_name
-  table_arn       = module.storage.table_arn
-  user_index_name = module.storage.user_index_name
-  jwt_issuer      = module.auth.issuer
-  jwt_audience    = [module.auth.client_id]
-  allowed_origins = local.allowed_origins
+  source             = "./modules/api"
+  project_name       = var.project_name
+  environment        = var.environment
+  bucket_name        = module.storage.bucket_name
+  bucket_arn         = module.storage.bucket_arn
+  table_name         = module.storage.table_name
+  table_arn          = module.storage.table_arn
+  user_index_name    = module.storage.user_index_name
+  budgets_table_name = module.storage.budgets_table_name
+  budgets_table_arn  = module.storage.budgets_table_arn
+  jwt_issuer         = module.auth.issuer
+  jwt_audience       = [module.auth.client_id]
+  allowed_origins    = local.allowed_origins
 }
 
 module "frontend" {

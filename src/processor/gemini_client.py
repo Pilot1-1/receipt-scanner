@@ -23,7 +23,12 @@ Return ONLY a JSON object with exactly these fields:
 - "store": merchant name as a string, or null if unreadable
 - "date": purchase date as "YYYY-MM-DD", or null if unreadable
 - "total": the final amount paid as a number (no currency symbol), or null
-- "currency": 3-letter currency code such as "USD", "EUR", "KZT", or null
+- "currency": 3-letter ISO currency code such as "USD", "EUR", "KZT", "RUB", "TRY", or null if you cannot tell.
+  Use the symbol or word printed on the receipt first:
+  "₸", "тг", "тенге" -> KZT; "₽", "руб" -> RUB; "₺", "TL" -> TRY; "$" -> USD; "€" -> EUR.
+  If none is printed, work out the country from the receipt itself (address, city, store chain, tax identifiers
+  such as ИНН for Russia or БИН/ИИН for Kazakhstan) and use that country's currency.
+  The language alone is not enough: Russian is written on receipts in Russia and in Kazakhstan.
 - "category": exactly one of {json.dumps(CATEGORIES)}
   (food = cafes, restaurants, food delivery; groceries = supermarkets and food shops;
    bills = utilities, phone, internet, rent)

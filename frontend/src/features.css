@@ -1,0 +1,160 @@
+/* New in this version: tabs, overview cards, chart, filters, products, budgets, receipt actions.
+   Loaded after styles.css (see main.jsx), so it uses the same colours and fonts (variables in :root). */
+
+:root {
+  --warn: #b7791f;
+  --warn-soft: #fdf3dc;
+}
+
+.stack { display: grid; gap: 1.25rem; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.panel .panel-head h2 + .muted { font-size: 0.92rem; }
+
+/* ---------- upload strip (above the tabs on every screen) ---------- */
+.panel.upload-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem 1.5rem; flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+}
+.upload-text { display: grid; gap: 0.15rem; min-width: 0; flex: 1 1 18rem; }
+.upload-text h2 { font-size: 1rem; }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 0.25rem; margin: 1.25rem 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button {
+  background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 0.7rem 1rem; font-weight: 500; color: var(--muted); white-space: nowrap;
+}
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-count { margin-left: 0.45rem; font: 400 0.78rem var(--mono); color: var(--muted); }
+
+/* ---------- period picker: the two date fields look like one control and appear only for "Custom range" ---------- */
+.toolbar .filters { flex-wrap: wrap; justify-content: flex-end; }
+.range {
+  display: inline-flex; align-items: center; gap: 0.2rem; padding: 0 0.55rem;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--muted);
+}
+.range:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.range input { width: auto; min-width: 0; padding: 0.35rem 0.1rem; border: 0; background: none; color: var(--ink); }
+.range input:focus-visible { outline: none; }
+
+/* ---------- number cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.cards.cards-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.25rem; min-width: 0; }
+.card h3 { margin: 0 0 0.5rem; font-size: 0.92rem; font-weight: 500; color: var(--muted); }
+.card-value { font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; overflow-wrap: anywhere; }
+.card-value.card-text { font-size: 1.3rem; letter-spacing: -0.015em; }
+.card-sub { margin-top: 0.35rem; font-size: 0.88rem; color: var(--muted); }
+.delta { font: 500 0.88rem var(--mono); }
+.delta.bad { color: var(--bad); }
+.delta.good { color: var(--ok); }
+.delta.flat { color: var(--muted); }
+
+/* ---------- spending chart ---------- */
+.chart-readout { min-height: 1.5em; margin-bottom: 0.4rem; font: 500 0.95rem var(--mono); }
+.chart-box { min-height: 3rem; }
+.chart-box svg { display: block; max-width: 100%; }
+.chart-grid line { stroke: var(--line-soft); }
+.chart-grid text, .chart-tick { font: 400 11px var(--mono); fill: var(--muted); }
+.chart-bar { fill: var(--accent); opacity: 0.78; transition: opacity 0.15s ease; }
+.chart-slot:hover .chart-bar, .chart-slot.is-hot .chart-bar { opacity: 1; }
+
+/* ---------- search and filters ---------- */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.filter-bar .search { flex: 1 1 14rem; min-width: 0; width: auto; }
+.filter-bar select { max-width: 100%; }
+.filter-count { margin: 0.75rem 0; }
+.receipt-list li { border-top: 1px solid var(--line); }
+.receipt-list > .note { margin-bottom: 0.5rem; }
+.receipt-list > .empty { padding-bottom: 0.5rem; }
+
+/* ---------- products ---------- */
+.products li { border-top: 1px solid var(--line); }
+.p-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem 9rem 6.5rem; gap: 1rem; align-items: center;
+  width: calc(100% + 1rem); margin: 0 -0.5rem; padding: 0.8rem 0.5rem; background: none; border: 0; border-radius: 8px;
+  text-align: left; color: inherit; font: inherit;
+}
+.p-row:hover, .p-row[aria-expanded="true"] { background: #f4f6fa; }
+.p-name { font-weight: 500; overflow-wrap: anywhere; }
+.p-name small { display: block; margin-top: 0.1rem; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+.p-price { text-align: right; }
+.p-change.change { text-align: right; }
+.spark { display: block; }
+.spark polyline { stroke: var(--muted); }
+.spark circle { fill: var(--muted); }
+.spark.up polyline { stroke: var(--bad); }
+.spark.up circle { fill: var(--bad); }
+.spark.down polyline { stroke: var(--ok); }
+.spark.down circle { fill: var(--ok); }
+
+.p-history { padding: 0.25rem 0 1rem; }
+.p-history .note { margin-bottom: 0.6rem; }
+.p-history li {
+  display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 6rem 11rem; gap: 1rem; align-items: center;
+  padding: 0.4rem 0; border-top: 1px solid var(--line-soft); font-size: 0.93rem;
+}
+.p-history .p-store { overflow-wrap: anywhere; }
+.p-history .num { font: 400 0.85rem var(--mono); color: var(--muted); text-align: right; }
+.p-history .amount .chip { margin-left: 0.5rem; }
+
+/* ---------- budgets ---------- */
+.budget-list { display: grid; gap: 1rem; margin-top: 0.9rem; }
+.budget-line { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 0.35rem; }
+.budget-name { text-transform: capitalize; font-weight: 500; }
+.budget-figures { font: 400 0.85rem var(--mono); color: var(--muted); text-align: right; }
+.meter { height: 8px; border-radius: 4px; background: var(--line-soft); overflow: hidden; }
+.meter span { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.4s ease; }
+.meter.warn span { background: var(--warn); }
+.meter.bad span { background: var(--bad); }
+.budget-note { margin-top: 0.3rem; font-size: 0.85rem; color: var(--muted); }
+.budget-note.warn { color: var(--warn); }
+.budget-note.bad { color: var(--bad); }
+
+.budget-form { display: grid; gap: 1rem; }
+.budget-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem 1rem; }
+.budget-fields label, .edit-form label { display: grid; gap: 0.3rem; font-size: 0.92rem; font-weight: 500; text-transform: capitalize; }
+.form-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ---------- receipt window: photo, edit, delete ---------- */
+.detail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+.ghost.danger { color: var(--bad); }
+.ghost.danger:hover { border-color: var(--bad); }
+.primary.danger { background: var(--bad); }
+.primary.danger:hover:not(:disabled) { background: #8f1f19; }
+.confirm { display: grid; gap: 0.8rem; margin-bottom: 1.1rem; padding: 0.9rem 1rem; border: 1px solid #f0c4c0; border-radius: 10px; background: var(--bad-soft); }
+.detail-body > .error { margin-bottom: 0.9rem; }
+
+.photo-panel { display: grid; gap: 0.5rem; justify-items: center; margin-bottom: 1.25rem; padding: 0.75rem; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--page); }
+.photo-panel img { display: block; max-width: 100%; max-height: 60vh; object-fit: contain; border-radius: 6px; }
+
+.edit-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1rem; margin-bottom: 1.5rem; }
+.edit-form h2 { grid-column: 1 / -1; font-size: 1.4rem; }
+.edit-form .wide { grid-column: 1 / -1; }
+.edit-form label { text-transform: none; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 900px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .tabs button { padding: 0.65rem 0.8rem; }
+  .cards { gap: 0.75rem; }
+  .card { padding: 0.9rem 1rem; }
+  .budget-fields, .edit-form { grid-template-columns: 1fr; }
+  .p-row {
+    grid-template-columns: minmax(0, 1fr) auto; row-gap: 0.4rem;
+    grid-template-areas: "name price" "spark change";
+  }
+  .p-name { grid-area: name; } .p-price { grid-area: price; }
+  .p-spark { grid-area: spark; } .p-change.change { grid-area: change; }
+  .p-history li { grid-template-columns: 1fr auto; row-gap: 0.1rem; }
+  .p-history .r-date { grid-column: 1; }
+  .p-history .p-store { grid-column: 1; grid-row: 2; color: var(--muted); font-size: 0.85rem; }
+  .p-history .num { display: none; }
+  .p-history .amount { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-bar, .meter span { transition: none; }
+}

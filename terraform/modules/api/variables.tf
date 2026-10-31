@@ -44,3 +44,12 @@ variable "allowed_origins" {
   type        = list(string)
   default     = ["*"]
 }
+
+variable "budgets_table_name" {
+  description = "Table with the monthly limits per user (from the storage module)"
+  type        = string
+}
+
+variable "budgets_table_arn" {
+  type = string
+}

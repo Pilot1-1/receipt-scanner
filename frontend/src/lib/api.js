@@ -34,3 +34,19 @@ export async function uploadReceipt(file) {
   const response = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
   if (!response.ok) throw new Error(`Upload to storage failed (${response.status})`);
 }
+
+/** A temporary link (valid for a few minutes) to the original photo of one receipt. */
+export const getReceiptImage = async (id) => (await call(`/receipts/${id}/image`)).url;
+
+/** Fix what the model got wrong: any of { store, date, total, currency, category }. */
+export const updateReceipt = (id, changes) => call(`/receipts/${id}`, { method: "PATCH", body: changes });
+
+/** Removes the receipt and its photo. */
+export const deleteReceipt = (id) => call(`/receipts/${id}`, { method: "DELETE" });
+
+/** Monthly limits as { EUR: { food: 200, ... }, KZT: { ... } }. */
+export const getBudgets = async () => (await call("/budgets")).budgets;
+
+/** Sets the limits of one currency: { food: 200, bills: null } (null or 0 removes a limit). Returns all budgets. */
+export const saveBudgets = async (currency, limits) =>
+  (await call("/budgets", { method: "PUT", body: { currency, limits } })).budgets;
