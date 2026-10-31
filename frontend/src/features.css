@@ -19,9 +19,14 @@
 .upload-text h2 { font-size: 1rem; }
 
 /* ---------- tabs ---------- */
-.tabs { display: flex; gap: 0.25rem; margin: 1.25rem 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabbar {
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1rem;
+  margin: 1.25rem 0; border-bottom: 1px solid var(--line);
+}
+.tabbar .segmented { margin-bottom: 0.5rem; }
+.tabs { display: flex; gap: 0.25rem; min-width: 0; overflow-x: auto; }
 .tabs button {
-  background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: none; border: 0; border-bottom: 2px solid transparent;
   padding: 0.7rem 1rem; font-weight: 500; color: var(--muted); white-space: nowrap;
 }
 .tabs button:hover { color: var(--ink); }
@@ -51,6 +56,33 @@
 .delta.good { color: var(--ok); }
 .delta.flat { color: var(--muted); }
 
+/* ---------- budget banner: the loud one ---------- */
+.budget-banner {
+  --tone: var(--accent); --tone-soft: #eef0ff;
+  display: grid; gap: 0.6rem; padding: 1.25rem 1.5rem; border: 1px solid var(--tone); border-left-width: 6px;
+  border-radius: 14px; background: var(--tone-soft);
+}
+.budget-banner.warn { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+.budget-banner.bad { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+.bb-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.bb-head h2 { font-size: 1.05rem; }
+.bb-badge { padding: 0.15rem 0.8rem; border-radius: 999px; background: var(--tone); color: #fff; font: 600 1rem var(--mono); }
+.bb-figures { font-size: clamp(1.4rem, 3vw, 2rem); letter-spacing: -0.02em; color: var(--muted); }
+.bb-figures strong { color: var(--ink); font-weight: 600; }
+.bb-meter { position: relative; height: 18px; border-radius: 9px; background: rgba(22, 33, 44, 0.12); }
+.bb-fill { position: absolute; inset: 0 auto 0 0; border-radius: 9px; background: var(--tone); transition: width 0.4s ease; }
+.bb-pace { position: absolute; top: -5px; bottom: -5px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); }
+.bb-note { font-weight: 500; }
+.bb-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.bb-chips li {
+  display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0.7rem 0.15rem 0.55rem;
+  border: 1px solid var(--warn); border-radius: 999px; background: var(--paper); color: var(--warn);
+  font: 500 0.85rem var(--mono);
+}
+.bb-chips li.bad { border-color: var(--bad); color: var(--bad); }
+.bb-chips li i { width: 10px; height: 10px; border-radius: 3px; }
+.bb-hint { font-size: 0.82rem; color: var(--muted); }
+
 /* ---------- spending chart ---------- */
 .chart-readout { min-height: 1.5em; margin-bottom: 0.4rem; font: 500 0.95rem var(--mono); }
 .chart-box { min-height: 3rem; }
@@ -58,7 +90,20 @@
 .chart-grid line { stroke: var(--line-soft); }
 .chart-grid text, .chart-tick { font: 400 11px var(--mono); fill: var(--muted); }
 .chart-bar { fill: var(--accent); opacity: 0.78; transition: opacity 0.15s ease; }
-.chart-slot:hover .chart-bar, .chart-slot.is-hot .chart-bar { opacity: 1; }
+.chart-slot:hover .chart-bar, .chart-slot.is-hot .chart-bar, .chart-slot.is-selected .chart-bar { opacity: 1; }
+.chart-select { fill: var(--accent); opacity: 0.1; }
+.chart-slot.is-selected .chart-bar { fill: #1d2da8; }
+.chart-hit { cursor: default; outline: none; }
+.chart-hit.clickable { cursor: pointer; }
+.chart-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chart-hint { margin-top: 0.5rem; }
+
+.bucket { display: grid; gap: 0.8rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.bucket-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.bucket-head h3 { margin: 0 0 0.15rem; font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
+.bucket .search { width: 100%; }
+.bucket .receipt-list li:first-child { border-top: 0; }
+.r-match { display: block; margin-top: 0.1rem; font-weight: 400; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
 
 /* ---------- search and filters ---------- */
 .filter-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
@@ -104,8 +149,8 @@
 .budget-line { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin-bottom: 0.35rem; }
 .budget-name { text-transform: capitalize; font-weight: 500; }
 .budget-figures { font: 400 0.85rem var(--mono); color: var(--muted); text-align: right; }
-.meter { height: 8px; border-radius: 4px; background: var(--line-soft); overflow: hidden; }
-.meter span { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.4s ease; }
+.meter { height: 12px; border-radius: 6px; background: var(--line-soft); overflow: hidden; }
+.meter span { display: block; height: 100%; border-radius: 6px; background: var(--accent); transition: width 0.4s ease; }
 .meter.warn span { background: var(--warn); }
 .meter.bad span { background: var(--bad); }
 .budget-note { margin-top: 0.3rem; font-size: 0.85rem; color: var(--muted); }
@@ -143,6 +188,8 @@
   .cards { gap: 0.75rem; }
   .card { padding: 0.9rem 1rem; }
   .budget-fields, .edit-form { grid-template-columns: 1fr; }
+  .budget-banner { padding: 1rem 1.1rem; }
+  .tabbar .segmented { margin-bottom: 0.6rem; }
   .p-row {
     grid-template-columns: minmax(0, 1fr) auto; row-gap: 0.4rem;
     grid-template-areas: "name price" "spark change";
@@ -156,5 +203,5 @@
   .p-history .amount { grid-column: 2; grid-row: 1 / span 2; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chart-bar, .meter span { transition: none; }
+  .chart-bar, .meter span, .bb-fill { transition: none; }
 }

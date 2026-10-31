@@ -21,8 +21,12 @@ Browser ──► CloudFront ──► S3 (site)           React app built with 
 
 - **Overview**: opens on "this month". The period can be switched to the last 30 days, 6 or 12 months, all time or a
   custom range (two date fields appear only for that choice). Cards (spent in the period and the change against the
-  period before it, top store, biggest receipt, average per day), a bar chart that follows the period (per day, month
-  or year), spending by category, monthly budgets.
+  period before it, top store, biggest receipt, average per day), a budget bar for the month (spent against the sum of
+  the limits, with a tick for where an even spend would be today), a bar chart that follows the period (per day, month
+  or year), spending by category, monthly budgets per category.
+  Click a bar of the chart to list the receipts behind it and search them by store or product.
+- **Currency**: the switch next to the tabs applies to every tab. Lists, totals, the chart, budgets and products show
+  one currency at a time. Receipts that are still being read, or could not be read, have no currency yet and appear in all of them.
 - **Receipts**: search by store or product, filter by category and status, sort, export the shown list to CSV.
   Click a receipt to see its products and price changes, look at the original photo, correct the data, or delete it.
 - **Products**: every product you bought, its price history, the biggest rise and drop, the cheapest store.

@@ -1,5 +1,6 @@
 import { CATEGORIES, formatMoney, isPending } from "../lib/stats";
 import { hasLines } from "../lib/prices";
+import { matchingItems } from "../lib/filters";
 
 function Amount({ receipt }) {
   if (receipt.status === "done" && typeof receipt.total === "number")
@@ -22,9 +23,10 @@ function Chips({ trend }) {
 
 /**
  * A list of receipts. `receipts` is what to show (already filtered or shortened); `totalCount` is how many
- * exist, so an empty list can say "nothing yet" or "nothing matches".
+ * exist, so an empty list can say "nothing yet" or "nothing matches". With a search `query`, the products that
+ * matched are shown under the store name, so it is clear why a receipt is in the list.
  */
-export default function ReceiptList({ receipts, totalCount, error, trends, onOpen }) {
+export default function ReceiptList({ receipts, totalCount, error, trends, onOpen, query = "" }) {
   const canOpen = (r) => r.status === "done" && typeof r.total === "number";
   const anyLines = receipts?.some(hasLines);
 
@@ -36,7 +38,7 @@ export default function ReceiptList({ receipts, totalCount, error, trends, onOpe
       {receipts === null ? (
         <p className="muted">Loading…</p>
       ) : receipts.length === 0 ? (
-        <p className="empty">{totalCount === 0 ? "No receipts yet. Add your first photo above." : "No receipts match these filters."}</p>
+        <p className="empty">{totalCount === 0 ? "No receipts yet. Add your first photo above." : "No receipts match this search."}</p>
       ) : (
         <ul>
           {receipts.map((r) => {
@@ -49,6 +51,11 @@ export default function ReceiptList({ receipts, totalCount, error, trends, onOpe
                     {r.store || "Unknown store"}
                     <Chips trend={trends?.get(r.receiptId)} />
                     {r.status === "failed" && r.error && <small>{r.error}</small>}
+                    {matchingItems(r, query).map((item, i) => (
+                      <span key={i} className="r-match">
+                        {item.name} · {formatMoney(item.price, r.currency || "?")}
+                      </span>
+                    ))}
                   </span>
                   <span className="r-cat">
                     {r.status === "done" && (

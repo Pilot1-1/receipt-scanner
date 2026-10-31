@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Brand from "./Brand";
 import Breakdown from "./Breakdown";
+import BudgetBanner from "./BudgetBanner";
 import Budgets from "./Budgets";
 import { CurrencySwitch, PeriodSelect } from "./Controls";
 import Notices from "./Notices";
@@ -16,7 +17,7 @@ import { SessionExpiredError, getBudgets, listReceipts, saveBudgets } from "../l
 import { downloadCsv, receiptsToCsv } from "../lib/csv";
 import { DEFAULT_FILTERS, filterReceipts } from "../lib/filters";
 import { buildIndex, buildProducts, compareReceipt, hasLines, summarizeComparison } from "../lib/prices";
-import { DEFAULT_PERIOD, bestCurrency, currenciesOf, isPending, overview, summarize } from "../lib/stats";
+import { DEFAULT_PERIOD, bestCurrency, currenciesOf, isPending, isoDay, overview, receiptsOfCurrency, summarize } from "../lib/stats";
 
 const POLL_MS = 3000;
 const MAX_NOTICES = 3;
@@ -122,7 +123,13 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
     return result;
   }, [receipts, index]);
 
-  const visible = useMemo(() => filterReceipts(receipts || [], filters), [receipts, filters]);
+  // Every list shows one currency at a time (the switch next to the tabs).
+  const ofCurrency = useMemo(
+    () => (receipts ? receiptsOfCurrency(receipts, active) : null),
+    [receipts, active]
+  );
+  const visible = useMemo(() => filterReceipts(ofCurrency || [], filters), [ofCurrency, filters]);
+  const limits = (budgets && active && budgets[active]) || null;
 
   const open = openId && receipts ? receipts.find((r) => r.receiptId === openId) : null;
   const openLines = useMemo(() => (open ? compareReceipt(open, index) : []), [open, index]);
@@ -138,7 +145,7 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
 
   const tabs = [
     { id: "overview", label: "Overview" },
-    { id: "receipts", label: "Receipts", count: receipts?.length },
+    { id: "receipts", label: "Receipts", count: ofCurrency?.length },
     { id: "products", label: "Products", count: receipts ? products.length : undefined },
   ];
 
@@ -154,7 +161,10 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
 
       <Notices notices={notices} onOpen={setOpenId} onDismiss={dismiss} />
       <Uploader onUploaded={refresh} />
-      <Tabs tabs={tabs} active={tab} onChange={setTab} />
+      <div className="tabbar">
+        <Tabs tabs={tabs} active={tab} onChange={setTab} />
+        <CurrencySwitch currencies={currencies} currency={active} onChange={setCurrency} />
+      </div>
 
       <main>
         <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="stack">
@@ -163,7 +173,6 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
               <div className="toolbar">
                 <h2>Overview</h2>
                 <div className="filters">
-                  <CurrencySwitch currencies={currencies} currency={active} onChange={setCurrency} />
                   <PeriodSelect period={period} onChange={setPeriod} />
                 </div>
               </div>
@@ -171,7 +180,8 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
               {receipts !== null && active && (
                 <>
                   <StatCards stats={stats} period={period} currency={active} />
-                  <SpendChart receipts={receipts} currency={active} period={period} />
+                  <BudgetBanner limits={limits} spent={monthSpent} currency={active} />
+                  <SpendChart receipts={receipts} currency={active} period={period} trends={trends} onOpen={setOpenId} />
                 </>
               )}
               <div className="grid">
@@ -186,12 +196,12 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
               <section className="panel" aria-labelledby="recent-title">
                 <div className="panel-head">
                   <h2 id="recent-title">Recent receipts</h2>
-                  {receipts && receipts.length > RECENT && (
-                    <button className="link" onClick={() => setTab("receipts")}>All {receipts.length} receipts</button>
+                  {ofCurrency && ofCurrency.length > RECENT && (
+                    <button className="link" onClick={() => setTab("receipts")}>All {ofCurrency.length} receipts</button>
                   )}
                 </div>
                 <ReceiptList
-                  receipts={receipts && receipts.slice(0, RECENT)} totalCount={receipts?.length}
+                  receipts={ofCurrency && ofCurrency.slice(0, RECENT)} totalCount={ofCurrency?.length}
                   error={loadError} trends={trends} onOpen={setOpenId}
                 />
               </section>
@@ -201,13 +211,16 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
           {tab === "receipts" && (
             <section className="panel" aria-labelledby="receipts-title">
               <h2 id="receipts-title">Receipts</h2>
-              {receipts !== null && receipts.length > 0 && (
+              {ofCurrency !== null && ofCurrency.length > 0 && (
                 <ReceiptFilters
-                  filters={filters} onChange={setFilters} shown={visible.length} total={receipts.length}
-                  onExport={() => downloadCsv(receiptsToCsv(visible))}
+                  filters={filters} onChange={setFilters} shown={visible.length} total={ofCurrency.length}
+                  onExport={() => downloadCsv(receiptsToCsv(visible), `receipts-${isoDay(new Date())}${active && active !== "?" ? `-${active}` : ""}.csv`)}
                 />
               )}
-              <ReceiptList receipts={receipts && visible} totalCount={receipts?.length} error={loadError} trends={trends} onOpen={setOpenId} />
+              <ReceiptList
+                receipts={ofCurrency && visible} totalCount={ofCurrency?.length} error={loadError}
+                trends={trends} onOpen={setOpenId} query={filters.query}
+              />
             </section>
           )}
 
@@ -215,7 +228,7 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
             receipts === null ? (
               <p className="muted">Loading your receipts…</p>
             ) : (
-              <ProductsTab products={products} currencies={currencies} currency={active} onCurrency={setCurrency} />
+              <ProductsTab products={products} currencies={currencies} currency={active} />
             )
           )}
         </div>

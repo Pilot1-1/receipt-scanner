@@ -155,6 +155,13 @@ export function bestCurrency(receipts, period, now = new Date()) {
   return inPeriodFirst[0] ?? overall[0];
 }
 
+/**
+ * The receipts to list for one currency. Receipts that are still being read, or could not be read, have no
+ * currency yet, so they are kept: a fresh upload must not vanish when another currency is selected.
+ */
+export const receiptsOfCurrency = (receipts, currency) =>
+  receipts.filter((r) => r.status !== "done" || (r.currency || "?") === currency);
+
 const rowsOf = (receipts, currency, range) =>
   receipts.filter((r) => isDone(r) && (r.currency || "?") === currency && inRange(r, range));
 
@@ -210,7 +217,8 @@ export function overview(receipts, currency, period, now = new Date()) {
 /**
  * The bars of the chart for a period. The bar size follows the length of the period:
  * up to ~2 months: one bar per day; up to 3 years: per month; longer: per year.
- * Returns { unit: "day" | "month" | "year", points: [{ key, amount }] }; keys look like "2026-10-12", "2026-10", "2026".
+ * Returns { unit: "day" | "month" | "year", from, to, points: [{ key, amount, count }] } (count = receipts in the bar);
+ * keys look like "2026-10-12", "2026-10", "2026". `from` and `to` are the days the bars cover.
  * Periods without a start ("all time") begin at the first receipt.
  */
 export function bucketSeries(receipts, currency, period, now = new Date()) {
@@ -220,7 +228,7 @@ export function bucketSeries(receipts, currency, period, now = new Date()) {
 
   let from = range && range.from ? range.from : rows.map(dayOf).filter(validDay).sort()[0];
   const to = range && range.to < todayKey ? range.to : todayKey;
-  if (!from) return { unit: "day", points: [] };
+  if (!from) return { unit: "day", from: "", to: "", points: [] };
   if (from > to) from = to;
 
   const monthsSpan = (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(to.slice(5, 7)) - Number(from.slice(5, 7)) + 1;
@@ -230,7 +238,11 @@ export function bucketSeries(receipts, currency, period, now = new Date()) {
   const totals = new Map();
   for (const r of rows) {
     const day = dayOf(r);
-    if (day >= from && day <= to) totals.set(keyOf(day), (totals.get(keyOf(day)) || 0) + r.total);
+    if (day < from || day > to) continue;
+    const entry = totals.get(keyOf(day)) || { amount: 0, count: 0 };
+    entry.amount += r.total;
+    entry.count += 1;
+    totals.set(keyOf(day), entry);
   }
 
   const keys = [];
@@ -244,7 +256,13 @@ export function bucketSeries(receipts, currency, period, now = new Date()) {
   } else {
     for (let y = Math.max(Number(from.slice(0, 4)), Number(to.slice(0, 4)) - 59); y <= Number(to.slice(0, 4)); y++) keys.push(String(y));
   }
-  return { unit, points: keys.map((key) => ({ key, amount: round2(totals.get(key) || 0) })) };
+  return {
+    unit, from, to,
+    points: keys.map((key) => {
+      const entry = totals.get(key) || { amount: 0, count: 0 };
+      return { key, amount: round2(entry.amount), count: entry.count };
+    }),
+  };
 }
 
 export function formatMoney(amount, currency) {

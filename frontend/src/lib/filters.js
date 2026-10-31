@@ -23,15 +23,26 @@ export const SORTS = [
 export const isModified = (filters) =>
   Object.keys(DEFAULT_FILTERS).some((name) => filters[name] !== DEFAULT_FILTERS[name]);
 
+const termsOf = (query) => query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
 /** Every word typed must appear in the store name, the date or a product name. */
-function matches(receipt, query) {
-  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+export function matchesQuery(receipt, query) {
+  const terms = termsOf(query);
   if (!terms.length) return true;
   const text = [receipt.store, receipt.date, ...(receipt.items || []).map((item) => item.name)]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
   return terms.every((term) => text.includes(term));
+}
+
+/** The product lines that contain a typed word: shows WHY a receipt matched a search. */
+export function matchingItems(receipt, query, limit = 3) {
+  const terms = termsOf(query);
+  if (!terms.length) return [];
+  return (receipt.items || [])
+    .filter((item) => terms.some((term) => (item.name || "").toLowerCase().includes(term)))
+    .slice(0, limit);
 }
 
 const dateOrder = (receipt) => `${dayOf(receipt)}|${receipt.createdAt || ""}`;
@@ -59,7 +70,7 @@ export function filterReceipts(receipts, filters) {
     (r) =>
       (filters.category === "all" || r.category === filters.category) &&
       (filters.status === "all" || statusOf(r) === filters.status) &&
-      matches(r, filters.query)
+      matchesQuery(r, filters.query)
   );
   return COMPARE[filters.sort] ? [...rows].sort(COMPARE[filters.sort]) : rows; // "added" keeps the API order
 }

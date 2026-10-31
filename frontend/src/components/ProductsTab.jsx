@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import Sparkline from "./Sparkline";
-import { CurrencySwitch } from "./Controls";
 import { MIN_CHANGE, formatChange, perUnit, trendOf } from "../lib/prices";
 import { formatMoney, shortDay } from "../lib/stats";
 
@@ -70,7 +69,7 @@ function History({ product, currency }) {
 }
 
 /** Every product you have bought, with its price history. Built from the product lines of all receipts. */
-export default function ProductsTab({ products, currencies, currency, onCurrency }) {
+export default function ProductsTab({ products, currencies, currency }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("count");
   const [openId, setOpenId] = useState(null);
@@ -100,7 +99,6 @@ export default function ProductsTab({ products, currencies, currency, onCurrency
     <div className="stack">
       <div className="toolbar">
         <h2>Products</h2>
-        <CurrencySwitch currencies={currencies} currency={currency} onChange={onCurrency} />
       </div>
 
       <div className="cards cards-2">
