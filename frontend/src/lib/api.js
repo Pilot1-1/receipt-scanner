@@ -4,7 +4,7 @@ import { prepareImage } from "./image";
 
 export class SessionExpiredError extends Error {}
 
-async function call(path, { method = "GET", body } = {}) {
+export async function call(path, { method = "GET", body } = {}) {
   const session = await currentSession();
   if (!session) throw new SessionExpiredError("Your session has expired. Sign in again.");
 
@@ -35,8 +35,8 @@ export async function uploadReceipt(file) {
   if (!response.ok) throw new Error(`Upload to storage failed (${response.status})`);
 }
 
-/** A temporary link (valid for a few minutes) to the original photo of one receipt. */
-export const getReceiptImage = async (id) => (await call(`/receipts/${id}/image`)).url;
+/** A temporary link (valid for a few minutes) to the original photo or PDF of one receipt: { url, contentType }. */
+export const getReceiptImage = (id) => call(`/receipts/${id}/image`);
 
 /** Fix what the model got wrong: any of { store, date, total, currency, category }. */
 export const updateReceipt = (id, changes) => call(`/receipts/${id}`, { method: "PATCH", body: changes });

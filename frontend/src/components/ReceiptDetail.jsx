@@ -34,7 +34,7 @@ export default function ReceiptDetail({ receipt, lines, onClose, onSaved, onDele
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [photo, setPhoto] = useState({ state: "closed", url: "", error: "" });
+  const [photo, setPhoto] = useState({ state: "closed", url: "", kind: "image", error: "" }); // kind: "image" | "pdf"
 
   // A native <dialog> gives focus handling and the Escape key for free.
   useEffect(() => {
@@ -61,7 +61,8 @@ export default function ReceiptDetail({ receipt, lines, onClose, onSaved, onDele
     if (photo.state !== "closed") return setPhoto({ state: "closed", url: "", error: "" });
     setPhoto({ state: "loading", url: "", error: "" });
     try {
-      setPhoto({ state: "ready", url: await getReceiptImage(receipt.receiptId), error: "" });
+      const { url, contentType } = await getReceiptImage(receipt.receiptId);
+      setPhoto({ state: "ready", url, kind: contentType === "application/pdf" ? "pdf" : "image", error: "" });
     } catch (failure) {
       if (failure instanceof SessionExpiredError) onExpired();
       else setPhoto({ state: "error", url: "", error: failure.message });
@@ -182,7 +183,7 @@ export default function ReceiptDetail({ receipt, lines, onClose, onSaved, onDele
 
             {mode === "delete" ? (
               <div className="confirm" role="alertdialog" aria-label="Confirm delete">
-                <p>Delete this receipt and its photo? This cannot be undone.</p>
+                <p>Delete this receipt and its file? This cannot be undone.</p>
                 <div className="form-actions">
                   <button className="primary danger" disabled={busy} onClick={remove}>{busy ? "Deleting…" : "Delete receipt"}</button>
                   <button className="ghost" disabled={busy} onClick={() => { setMode("view"); setError(""); }}>Keep it</button>
@@ -191,7 +192,7 @@ export default function ReceiptDetail({ receipt, lines, onClose, onSaved, onDele
             ) : (
               <div className="detail-actions">
                 <button className="ghost" aria-expanded={photo.state !== "closed"} onClick={togglePhoto}>
-                  {photo.state === "closed" ? "Show photo" : "Hide photo"}
+                  {photo.state === "closed" ? "Show original" : "Hide original"}
                 </button>
                 <button className="ghost" onClick={startEdit}>Edit</button>
                 <button className="ghost danger" onClick={() => { setError(""); setMode("delete"); }}>Delete</button>
@@ -201,13 +202,19 @@ export default function ReceiptDetail({ receipt, lines, onClose, onSaved, onDele
 
             {photo.state !== "closed" && (
               <div className="photo-panel">
-                {photo.state === "loading" && <p className="muted">Loading the photo…</p>}
+                {photo.state === "loading" && <p className="muted">Loading the original…</p>}
                 {photo.state === "error" && <p className="error" role="alert">{photo.error}</p>}
-                {photo.state === "ready" && (
+                {photo.state === "ready" && photo.kind === "pdf" && (
+                  <>
+                    <iframe className="pdf-frame" title={`PDF from ${receipt.store || "an unknown sender"}`} src={photo.url} />
+                    <a className="link" href={photo.url} target="_blank" rel="noopener noreferrer">Open the PDF in a new tab</a>
+                  </>
+                )}
+                {photo.state === "ready" && photo.kind === "image" && (
                   <>
                     <img
                       src={photo.url} alt={`Photo of the receipt from ${receipt.store || "an unknown store"}`}
-                      onError={() => setPhoto({ state: "error", url: "", error: "The photo could not be loaded. Close it and try again." })}
+                      onError={() => setPhoto({ state: "error", url: "", error: "The photo could not be loaded. Hide it and try again." })}
                     />
                     <a className="link" href={photo.url} target="_blank" rel="noopener noreferrer">Open full size</a>
                   </>

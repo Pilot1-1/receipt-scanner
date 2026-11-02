@@ -1,6 +1,6 @@
 # receipt-scanner
 
-Upload a photo of a receipt, Gemini reads it (store, date, total, currency, category, product lines),
+Upload a photo of a receipt (or a PDF, for example a Kaspi receipt), Gemini reads it (store, date, total, currency, category, product lines),
 and a dashboard shows where the money goes and how prices change. Everything is created by Terraform.
 
 ```
@@ -15,6 +15,7 @@ Browser ──► CloudFront ──► S3 (site)           React app built with 
               │ ObjectCreated
               ▼
         Lambda (processor) ──► Gemini ──► DynamoDB (receipts)
+
 ```
 
 ## What the website does
@@ -25,6 +26,10 @@ Browser ──► CloudFront ──► S3 (site)           React app built with 
   the limits, with a tick for where an even spend would be today), a bar chart that follows the period (per day, month
   or year), spending by category, monthly budgets per category.
   Click a bar of the chart to list the receipts behind it and search them by store or product.
+- **PDF receipts**: a PDF (up to 7 MB) can be uploaded like a photo, for example a receipt from the Kaspi app. Such a
+  receipt has no product lines: the shop (or the recipient of a transfer), the date and the total are read, and the
+  original opens in the receipt window.
+- **Theme**: the button in the header switches Auto (follows the system), Light and Dark; the choice is remembered.
 - **Currency**: the switch next to the tabs applies to every tab. Lists, totals, the chart, budgets and products show
   one currency at a time. Receipts that are still being read, or could not be read, have no currency yet and appear in all of them.
 - **Receipts**: search by store or product, filter by category and status, sort, export the shown list to CSV.
@@ -37,13 +42,20 @@ Every route needs a Cognito token (`Authorization: Bearer <id token>`). A receip
 
 | Route | Purpose |
 |---|---|
-| `POST /upload-url` | Creates the receipt row and a one-time upload link |
+| `POST /upload-url` | Creates the receipt row and a one-time upload link. `contentType`: JPEG, PNG, WebP or PDF |
 | `GET /receipts` | The user's receipts, newest first |
-| `GET /receipts/{id}/image` | Temporary (5 min) link to the original photo |
+| `GET /receipts/{id}/image` | Temporary (5 min) link to the original photo or PDF, with its `contentType` |
 | `PATCH /receipts/{id}` | Correct `store`, `date`, `total`, `currency`, `category`. Only receipts that were read; marks `edited: true` |
 | `DELETE /receipts/{id}` | Deletes the row and the photo |
 | `GET /budgets` | `{ "EUR": { "food": 200 } }` |
 | `PUT /budgets` | `{ "currency": "EUR", "limits": { "food": 200, "bills": null } }` (`null` or `0` removes a limit) |
+
+## Add-ons
+
+The site and the AWS part can be extended with separate add-ons, each in a folder of its own. Today there is one:
+**utility bills** (`bills/`, plus `frontend/src/addons/bills/` and `terraform/bills.tf`), a service with its own
+bucket, table, Lambdas and Gemini prompt. It is optional: without those three places the project is just the receipt
+scanner, and adding them later switches the service on. See `bills/README.md`.
 
 ## Deploy
 

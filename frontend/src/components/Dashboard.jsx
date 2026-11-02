@@ -12,7 +12,9 @@ import ReceiptList from "./ReceiptList";
 import SpendChart from "./SpendChart";
 import StatCards from "./StatCards";
 import Tabs from "./Tabs";
+import ThemeToggle from "./ThemeToggle";
 import Uploader from "./Uploader";
+import { extensions } from "../extensions";
 import { SessionExpiredError, getBudgets, listReceipts, saveBudgets } from "../lib/api";
 import { downloadCsv, receiptsToCsv } from "../lib/csv";
 import { DEFAULT_FILTERS, filterReceipts } from "../lib/filters";
@@ -147,23 +149,27 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
     { id: "overview", label: "Overview" },
     { id: "receipts", label: "Receipts", count: ofCurrency?.length },
     { id: "products", label: "Products", count: receipts ? products.length : undefined },
+    ...extensions.map(({ id, label }) => ({ id, label })), // add-ons (src/addons/*), if there are any
   ];
+  const extension = extensions.find((item) => item.id === tab);
+  const AddonPanel = extension?.Panel;
 
   return (
     <div className="app">
       <header className="bar">
         <Brand />
         <div className="bar-user">
+          <ThemeToggle />
           <span>{email}</span>
           <button className="ghost" onClick={onSignOut}>Sign out</button>
         </div>
       </header>
 
       <Notices notices={notices} onOpen={setOpenId} onDismiss={dismiss} />
-      <Uploader onUploaded={refresh} />
+      {!extension?.ownScreen && <Uploader onUploaded={refresh} />}
       <div className="tabbar">
         <Tabs tabs={tabs} active={tab} onChange={setTab} />
-        <CurrencySwitch currencies={currencies} currency={active} onChange={setCurrency} />
+        {!extension?.ownScreen && <CurrencySwitch currencies={currencies} currency={active} onChange={setCurrency} />}
       </div>
 
       <main>
@@ -223,6 +229,8 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
               />
             </section>
           )}
+
+          {AddonPanel && <AddonPanel onExpired={onExpired} />}
 
           {tab === "products" && (
             receipts === null ? (

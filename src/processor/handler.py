@@ -1,6 +1,6 @@
-"""Lambda: runs when a photo lands in s3://<bucket>/uploads/.
+"""Lambda: runs when a photo or PDF lands in s3://<bucket>/uploads/.
 
-Reads the photo, asks Gemini to extract the receipt data, and saves the
+Reads the file, asks Gemini to extract the receipt data, and saves the
 result (or the error) to DynamoDB. It never raises on a bad photo, because
 S3 would retry the Lambda and burn the free Gemini quota.
 """
@@ -27,7 +27,7 @@ table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
 MODEL = os.environ["GEMINI_MODEL"]
 KEY_PARAM = os.environ["GEMINI_KEY_PARAM"]
 MAX_BYTES = 7 * 1024 * 1024
-ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
 
 _api_key = None  # cached between invocations of a warm Lambda
 
@@ -94,7 +94,7 @@ def process(bucket, key):
     try:
         obj = s3.get_object(Bucket=bucket, Key=key)
         if obj["ContentLength"] > MAX_BYTES:
-            raise ValueError("Photo is larger than 7 MB")
+            raise ValueError("The file is larger than 7 MB")
         mime_type = mimetypes.guess_type(key)[0] or obj.get("ContentType", "")
         if mime_type not in ALLOWED_TYPES:
             raise ValueError(f"Unsupported file type: {mime_type or 'unknown'}")

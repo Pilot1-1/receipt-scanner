@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { uploadReceipt } from "../lib/api";
 
-/** Always visible above the tabs: a photo can be added from any screen. */
+/** Always visible above the tabs: a photo or a PDF can be added from any screen. */
 export default function Uploader({ onUploaded }) {
   const input = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -39,16 +39,16 @@ export default function Uploader({ onUploaded }) {
     >
       <div className="upload-text">
         <h2 id="add-receipt">Add a receipt</h2>
-        <p className="muted">Take a photo or drop one here. Make sure the total is in frame and readable.</p>
+        <p className="muted">Take a photo or drop a file here: a photo, or a PDF receipt (for example from Kaspi). Make sure the total is readable.</p>
         {status.error && <p className="error" role="alert">{status.error}</p>}
       </div>
 
       <input
-        ref={input} type="file" hidden multiple accept="image/jpeg,image/png,image/webp"
+        ref={input} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,application/pdf"
         onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
       />
       <button className="primary" disabled={status.busy} onClick={() => input.current.click()}>
-        {status.busy ? status.text : "Choose photos"}
+        {status.busy ? status.text : "Choose files"}
       </button>
     </section>
   );

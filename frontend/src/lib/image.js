@@ -1,11 +1,20 @@
 // Phone photos are often 5-15 MB; the processor rejects anything over 7 MB.
 // Shrinking in the browser also makes the upload (and Gemini) much faster.
+// A PDF (for example a receipt from a banking app) cannot be shrunk like a photo: it is sent as it is.
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+const PDF = "application/pdf";
 const MAX_SIDE = 2400; // receipts are tall and narrow, so keep enough pixels to read small print
 const SKIP_BELOW = 2 * 1024 * 1024;
 const HARD_LIMIT = 7 * 1024 * 1024;
 
+const isPdf = (file) => file.type === PDF || /\.pdf$/i.test(file.name);
+
 export async function prepareImage(file) {
+  if (isPdf(file)) {
+    if (file.size > HARD_LIMIT) throw new Error(`${file.name}: a PDF must be under 7 MB`);
+    return { blob: file, contentType: PDF };
+  }
+
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -27,6 +36,6 @@ export async function prepareImage(file) {
   } catch {
     // The browser could not decode it (e.g. HEIC in Chrome): send the original if the API accepts it.
     if (ALLOWED.includes(file.type) && file.size <= HARD_LIMIT) return { blob: file, contentType: file.type };
-    throw new Error(`${file.name}: use a JPEG, PNG or WebP photo under 7 MB`);
+    throw new Error(`${file.name}: use a JPEG, PNG or WebP photo, or a PDF, under 7 MB`);
   }
 }

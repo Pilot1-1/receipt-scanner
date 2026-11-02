@@ -1,9 +1,9 @@
 """Lambda behind API Gateway (HTTP API, payload format 2.0).
 
 POST   /upload-url           -> creates a receipt record and returns a temporary link the
-                                browser uses to upload the photo straight to S3.
+                                browser uses to upload the photo (or PDF) straight to S3.
 GET    /receipts             -> returns the saved receipts, newest first.
-GET    /receipts/{id}/image  -> returns a temporary link to the original photo.
+GET    /receipts/{id}/image  -> returns a temporary link to the original photo or PDF.
 PATCH  /receipts/{id}        -> corrects store, date, total, currency or category by hand.
 DELETE /receipts/{id}        -> deletes the receipt and its photo.
 GET    /budgets              -> returns the user's monthly limits per category.
@@ -44,7 +44,8 @@ budgets_table = dynamodb.Table(os.environ["BUDGETS_TABLE"])
 BUCKET = os.environ["BUCKET_NAME"]
 INDEX_NAME = os.environ["INDEX_NAME"]  # lists receipts by owner, newest first
 
-TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf"}
+TYPE_OF_EXTENSION = {extension: content_type for content_type, extension in TYPES.items()}
 CATEGORIES = ("food", "groceries", "transport", "shopping", "health", "entertainment", "bills", "other")
 URL_TTL_SECONDS = 300
 MAX_ITEMS = 200
@@ -217,12 +218,15 @@ def receipt_image(user_id, receipt_id):
     item = get_own_receipt(receipt_id, user_id)
     if not item or not item.get("imageKey"):
         return respond(404, {"error": "Not found"})
+    key = item["imageKey"]
+    # The site shows a photo with <img> and a PDF as a document, so it needs to know which one this is.
+    content_type = TYPE_OF_EXTENSION.get(key.rsplit(".", 1)[-1].lower(), "image/jpeg")
     url = s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket": BUCKET, "Key": item["imageKey"]},
+        Params={"Bucket": BUCKET, "Key": key, "ResponseContentType": content_type},
         ExpiresIn=URL_TTL_SECONDS,
     )
-    return respond(200, {"url": url, "expiresIn": URL_TTL_SECONDS})
+    return respond(200, {"url": url, "expiresIn": URL_TTL_SECONDS, "contentType": content_type})
 
 
 def parse_changes(body):

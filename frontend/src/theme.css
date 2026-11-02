@@ -1,0 +1,56 @@
+/* Dark theme. styles.css and features.css define the light one with variables in :root; here the same variables get
+   dark values, and the few colours that were written directly (white text on buttons, hover greys) are replaced.
+   Everything is scoped to [data-theme="dark"], so the light theme is exactly as it was. */
+
+:root[data-theme="dark"] {
+  color-scheme: dark; /* dark scrollbars, date pickers and drop-downs */
+  --page: #0e141b;
+  --paper: #151d26;
+  --ink: #e6ebf0;
+  --muted: #94a3b2;
+  --line: #2a3643;
+  --line-soft: #212c37;
+  --accent: #8a98ff;
+  --ok: #4cc38a;
+  --bad: #ff7b72;
+  --ok-soft: #12291f;
+  --bad-soft: #321a19;
+  --warn: #e3a948;
+  --warn-soft: #30260f;
+
+  /* extra variables for the places that used fixed colours */
+  --on-accent: #0c1124;   /* text on a filled accent button */
+  --accent-hover: #a9b4ff;
+  --accent-soft: #1a2142;
+  --hover: #1b2530;
+  --ok-line: #1f5a3f;
+  --bad-line: #6b2f2c;
+}
+
+/* buttons that were white-on-blue are dark-on-light-blue now */
+[data-theme="dark"] .primary { color: var(--on-accent); }
+[data-theme="dark"] .primary:hover:not(:disabled) { background: var(--accent-hover); }
+[data-theme="dark"] .primary.danger:hover:not(:disabled) { background: #ff9a92; }
+[data-theme="dark"] .segmented button[aria-pressed="true"] { color: var(--page); }
+[data-theme="dark"] .bb-badge { color: var(--on-accent); }
+
+/* hover and highlight greys */
+[data-theme="dark"] button.r-row:hover,
+[data-theme="dark"] .p-row:hover,
+[data-theme="dark"] .p-row[aria-expanded="true"] { background: var(--hover); }
+[data-theme="dark"] .upload.is-dragging { background: var(--accent-soft); }
+
+/* soft borders and fills */
+[data-theme="dark"] .notice[data-tone="good"] { border-color: var(--ok-line); }
+[data-theme="dark"] .notice[data-tone="bad"],
+[data-theme="dark"] .confirm { border-color: var(--bad-line); }
+[data-theme="dark"] .budget-banner:not(.warn):not(.bad) { --tone-soft: var(--accent-soft); }
+[data-theme="dark"] .bb-meter { background: rgba(255, 255, 255, 0.14); }
+[data-theme="dark"] .detail::backdrop { background: rgba(0, 0, 0, 0.6); }
+
+/* the chart: the open bar is brighter than the rest */
+[data-theme="dark"] .chart-slot.is-selected .chart-bar { fill: #c4ccff; }
+[data-theme="dark"] .chart-select { opacity: 0.16; }
+
+/* receipt photos and PDFs are light documents: keep them on a calm, slightly lifted background */
+[data-theme="dark"] .photo-panel { background: var(--line-soft); }
