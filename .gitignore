@@ -10,3 +10,11 @@ node_modules/
 frontend/dist/
 frontend/public/config.json
 testdeploy.ps1
+
+# remote-state settings (created by terraform/bootstrap)
+terraform/backend.hcl
+
+# python
+__pycache__/
+.pytest_cache/
+.venv/

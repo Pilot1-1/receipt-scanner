@@ -1,0 +1,11 @@
+# Remote state. To switch it on, copy this file to backend.tf (see docs/setup-guide.md):
+#
+#   cp backend.tf.example backend.tf
+#   terraform init -migrate-state -backend-config=backend.hcl -backend-config="key=dev/terraform.tfstate"
+#
+# The bucket and its settings come from backend.hcl (created by terraform/bootstrap), because a backend block
+# cannot use variables. Each environment has its own key, so dev and prod never share a state file.
+# Needs Terraform 1.10+ (use_lockfile: a lock object in the same bucket prevents two applies at once).
+terraform {
+  backend "s3" {}
+}

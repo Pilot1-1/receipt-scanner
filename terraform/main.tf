@@ -59,10 +59,22 @@ module "processor" {
 }
 
 module "auth" {
-  source            = "./modules/auth"
-  project_name      = var.project_name
-  environment       = var.environment
-  allow_self_signup = var.allow_self_signup
+  source              = "./modules/auth"
+  project_name        = var.project_name
+  environment         = var.environment
+  allow_self_signup   = var.allow_self_signup
+  allow_password_auth = var.allow_password_auth
+}
+
+# Private network for the API Lambda (no internet access, so it costs nothing).
+# The processor Lambda stays outside: it has to reach the Gemini API on the internet.
+module "network" {
+  count = var.enable_vpc ? 1 : 0
+
+  source       = "./modules/network"
+  project_name = var.project_name
+  environment  = var.environment
+  vpc_cidr     = var.vpc_cidr
 }
 
 module "api" {
@@ -79,6 +91,21 @@ module "api" {
   jwt_issuer         = module.auth.issuer
   jwt_audience       = [module.auth.client_id]
   allowed_origins    = local.allowed_origins
+  vpc_enabled        = var.enable_vpc
+  subnet_ids         = var.enable_vpc ? module.network[0].private_subnet_ids : []
+  security_group_ids = var.enable_vpc ? [module.network[0].lambda_security_group_id] : []
+}
+
+module "monitoring" {
+  source                  = "./modules/monitoring"
+  project_name            = var.project_name
+  environment             = var.environment
+  api_function_name       = module.api.function_name
+  processor_function_name = module.processor.function_name
+  api_id                  = module.api.api_id
+  table_name              = module.storage.table_name
+  alert_email             = var.alert_email
+  monthly_budget_usd      = var.monthly_budget_usd
 }
 
 module "frontend" {

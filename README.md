@@ -18,6 +18,20 @@ Browser ──► CloudFront ──► S3 (site)           React app built with 
 
 ```
 
+The API Lambda runs in a private VPC (no internet route; S3 and DynamoDB through free gateway endpoints). CloudWatch
+alarms, a dashboard, an SNS e-mail and an AWS Budget watch the whole thing.
+
+## Documentation
+
+| Document | What is in it |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | diagrams, service interaction and data flows, data model, network, security, scalability, Terraform layout |
+| [docs/setup-guide.md](docs/setup-guide.md) | prerequisites, remote state, deploy dev and prod, create a user, tear down |
+| [docs/cost-analysis.md](docs/cost-analysis.md) | free-tier usage, cost per service, optimizations, risks |
+| [docs/monitoring.md](docs/monitoring.md) | dashboard, alarms, logs, budget, how to test them |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | symptoms, causes, fixes |
+| [docs/demo-script.md](docs/demo-script.md) | 10-minute demonstration, checklist, questions and answers |
+
 ## What the website does
 
 - **Overview**: opens on "this month". The period can be switched to the last 30 days, 6 or 12 months, all time or a
@@ -29,8 +43,6 @@ Browser ──► CloudFront ──► S3 (site)           React app built with 
 - **PDF receipts**: a PDF (up to 7 MB) can be uploaded like a photo, for example a receipt from the Kaspi app. Such a
   receipt has no product lines: the shop (or the recipient of a transfer), the date and the total are read, and the
   original opens in the receipt window.
-- **Receipts that could not be read** ("Not read", or "Stalled" when the photo never arrived) have a **Delete** button in
-  the list, with one question before it deletes.
 - **Theme**: the button in the header switches Auto (follows the system), Light and Dark; the choice is remembered.
 - **Currency**: the switch next to the tabs applies to every tab. Lists, totals, the chart, budgets and products show
   one currency at a time. Receipts that are still being read, or could not be read, have no currency yet and appear in all of them.
@@ -68,6 +80,7 @@ Needs Node 20.19+ (or 22.12+), Terraform 1.5+, and AWS credentials.
 aws ssm put-parameter --name /receipt-scanner/dev/gemini-api-key --type SecureString --value "YOUR_KEY"
 
 .\scripts\deploy.ps1          # builds the site, then runs terraform apply
+./scripts/deploy.sh           # the same on Linux or macOS
 ```
 
 The first apply takes several minutes (CloudFront). It prints `site_url`.
@@ -76,6 +89,21 @@ The site needs `frontend/dist`, so always build before `terraform apply`; the sc
 When updating an existing deployment, `terraform apply` shows one new DynamoDB table (`budgets`),
 five new API routes and changed Lambda code and IAM policies. The only deletions are the old site build files
 (`assets/index-<hash>.js` and `.css`), which the new build replaces.
+
+## Environments, state, network and monitoring
+
+- **Environments**: `terraform/envs/dev.tfvars` and `prod.tfvars`. `.\scripts\deploy.ps1 -Env prod` deploys prod
+  (no local dev origin, the simple password flow is off, Cognito deletion protection is on).
+- **Remote state**: `terraform/bootstrap` creates a versioned, encrypted S3 bucket once; `terraform/backend.tf.example`
+  switches the main configuration to it, with one state key per environment. Prod is refused without it.
+  Steps are in [docs/setup-guide.md](docs/setup-guide.md).
+- **Network**: `modules/network` (VPC, two private subnets, gateway endpoints for S3 and DynamoDB, a security group
+  without inbound rules). `enable_vpc = false` turns it off. The processor Lambda stays outside the VPC because it must
+  reach the Gemini API and a NAT gateway is not free.
+- **Monitoring**: `modules/monitoring` (5 alarms, dashboard, SNS e-mail, budget). Set your e-mail with
+  `$env:TF_VAR_alert_email = "you@example.com"` before deploying and confirm the SNS message.
+- **Tests**: `python -m unittest discover -s tests -v` (no installation, no AWS account). CI runs them with
+  `terraform fmt`/`validate` and the frontend build.
 
 ## Currency of receipts
 

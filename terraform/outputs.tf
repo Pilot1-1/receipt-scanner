@@ -38,6 +38,21 @@ output "user_pool_client_id" {
   value       = module.auth.client_id
 }
 
+output "dashboard_name" {
+  description = "CloudWatch dashboard with requests, errors, latency and Gemini failures"
+  value       = module.monitoring.dashboard_name
+}
+
+output "alerts_topic_arn" {
+  description = "SNS topic that receives every alarm"
+  value       = module.monitoring.alerts_topic_arn
+}
+
+output "vpc_id" {
+  description = "VPC of the API Lambda (null when enable_vpc = false)"
+  value       = var.enable_vpc ? module.network[0].vpc_id : null
+}
+
 output "frontend_config" {
   description = "Same settings the site reads from /config.json. Save it to frontend/public/config.json to run the site locally."
   value       = local.frontend_config

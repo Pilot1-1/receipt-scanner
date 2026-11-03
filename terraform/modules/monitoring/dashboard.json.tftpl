@@ -1,0 +1,87 @@
+{
+  "widgets": [
+    {
+      "type": "text", "x": 0, "y": 0, "width": 24, "height": 2,
+      "properties": {
+        "markdown": "# ${project_name} (${environment})\nUpload → S3 → processor Lambda → Gemini → DynamoDB. The website reads through API Gateway → API Lambda."
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 2, "width": 12, "height": 6,
+      "properties": {
+        "title": "API Gateway requests and errors",
+        "region": "${region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+        "metrics": [
+          ["AWS/ApiGateway", "Count", "ApiId", "${api_id}", "Stage", "$default", { "label": "Requests" }],
+          [".", "4xx", ".", ".", ".", ".", { "label": "4xx" }],
+          [".", "5xx", ".", ".", ".", ".", { "label": "5xx", "color": "#d62728" }]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 2, "width": 12, "height": 6,
+      "properties": {
+        "title": "API latency (ms)",
+        "region": "${region}", "view": "timeSeries", "period": 300,
+        "metrics": [
+          ["AWS/ApiGateway", "Latency", "ApiId", "${api_id}", "Stage", "$default", { "stat": "Average", "label": "Average" }],
+          ["...", { "stat": "p95", "label": "p95" }]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 8, "width": 12, "height": 6,
+      "properties": {
+        "title": "Lambda invocations and errors",
+        "region": "${region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "${api_function_name}", { "label": "API invocations" }],
+          [".", "Errors", ".", ".", { "label": "API errors", "color": "#d62728" }],
+          ["AWS/Lambda", "Invocations", "FunctionName", "${processor_function_name}", { "label": "Processor invocations" }],
+          [".", "Errors", ".", ".", { "label": "Processor errors", "color": "#ff7f0e" }]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 8, "width": 12, "height": 6,
+      "properties": {
+        "title": "Processor duration (ms): time to read one receipt",
+        "region": "${region}", "view": "timeSeries", "period": 300,
+        "metrics": [
+          ["AWS/Lambda", "Duration", "FunctionName", "${processor_function_name}", { "stat": "Average", "label": "Average" }],
+          ["...", { "stat": "Maximum", "label": "Maximum" }]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 14, "width": 12, "height": 6,
+      "properties": {
+        "title": "DynamoDB consumed capacity (receipts table)",
+        "region": "${region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+        "metrics": [
+          ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${table_name}", { "label": "Read units" }],
+          [".", "ConsumedWriteCapacityUnits", ".", ".", { "label": "Write units" }],
+          [".", "ReadThrottleEvents", ".", ".", { "label": "Read throttles", "color": "#d62728" }],
+          [".", "WriteThrottleEvents", ".", ".", { "label": "Write throttles", "color": "#ff7f0e" }]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 14, "width": 12, "height": 6,
+      "properties": {
+        "title": "Gemini errors (from the processor log)",
+        "region": "${region}", "view": "timeSeries", "stat": "Sum", "period": 900,
+        "metrics": [
+          ["ReceiptScanner/${environment}", "GeminiErrors", { "label": "Rejected requests" }]
+        ]
+      }
+    },
+    {
+      "type": "alarm", "x": 0, "y": 20, "width": 24, "height": 3,
+      "properties": {
+        "title": "Alarms",
+        "alarms": ${jsonencode(alarm_arns)}
+      }
+    }
+  ]
+}

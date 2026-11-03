@@ -100,6 +100,15 @@ resource "aws_iam_role_policy" "api" {
   policy = data.aws_iam_policy_document.permissions.json
 }
 
+# A Lambda inside a VPC needs permission to create its network interfaces.
+# This AWS-managed policy contains exactly that (ec2:CreateNetworkInterface and friends).
+resource "aws_iam_role_policy_attachment" "vpc_access" {
+  count = var.vpc_enabled ? 1 : 0
+
+  role       = aws_iam_role.api.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 # --- Lambda ---
 resource "aws_lambda_function" "api" {
   function_name    = local.name
@@ -120,7 +129,21 @@ resource "aws_lambda_function" "api" {
     }
   }
 
-  depends_on = [aws_cloudwatch_log_group.api]
+  # Runs inside the private network when subnets are given. S3 and DynamoDB are reached through
+  # the free gateway endpoints, so no NAT gateway is needed.
+  dynamic "vpc_config" {
+    for_each = var.vpc_enabled ? [1] : []
+
+    content {
+      subnet_ids         = var.subnet_ids
+      security_group_ids = var.security_group_ids
+    }
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.api,
+    aws_iam_role_policy_attachment.vpc_access,
+  ]
 }
 
 # --- API Gateway (HTTP API) ---

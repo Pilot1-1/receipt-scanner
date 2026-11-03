@@ -53,3 +53,21 @@ variable "budgets_table_name" {
 variable "budgets_table_arn" {
   type = string
 }
+
+variable "vpc_enabled" {
+  description = "true: run the Lambda in the VPC given by subnet_ids and security_group_ids"
+  type        = bool
+  default     = false
+}
+
+variable "subnet_ids" {
+  description = "Private subnets for the Lambda (from the network module); used only when vpc_enabled is true"
+  type        = list(string)
+  default     = []
+}
+
+variable "security_group_ids" {
+  description = "Security groups of the Lambda; used only when vpc_enabled is true"
+  type        = list(string)
+  default     = []
+}

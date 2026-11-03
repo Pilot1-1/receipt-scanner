@@ -52,11 +52,13 @@ resource "aws_cognito_user_pool_client" "web" {
   # A browser app cannot keep a secret, so this client has none.
   generate_secret = false
 
-  explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",      # password is never sent: what the website should use
-    "ALLOW_USER_PASSWORD_AUTH", # simple login, handy for curl / AWS CLI tests
-    "ALLOW_REFRESH_TOKEN_AUTH",
-  ]
+  # SRP: the password is never sent, this is what the website uses.
+  # USER_PASSWORD_AUTH sends the password to Cognito; it is handy for curl / AWS CLI tests,
+  # so it is on by default and switched off in prod (allow_password_auth = false).
+  explicit_auth_flows = concat(
+    ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
+    var.allow_password_auth ? ["ALLOW_USER_PASSWORD_AUTH"] : [],
+  )
 
   prevent_user_existence_errors = "ENABLED" # wrong e-mail and wrong password look the same
   enable_token_revocation       = true      # sign-out really invalidates the refresh token
