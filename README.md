@@ -29,6 +29,8 @@ Browser ──► CloudFront ──► S3 (site)           React app built with 
 - **PDF receipts**: a PDF (up to 7 MB) can be uploaded like a photo, for example a receipt from the Kaspi app. Such a
   receipt has no product lines: the shop (or the recipient of a transfer), the date and the total are read, and the
   original opens in the receipt window.
+- **Receipts that could not be read** ("Not read", or "Stalled" when the photo never arrived) have a **Delete** button in
+  the list, with one question before it deletes.
 - **Theme**: the button in the header switches Auto (follows the system), Light and Dark; the choice is remembered.
 - **Currency**: the switch next to the tabs applies to every tab. Lists, totals, the chart, budgets and products show
   one currency at a time. Receipts that are still being read, or could not be read, have no currency yet and appear in all of them.

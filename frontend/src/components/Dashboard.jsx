@@ -15,7 +15,7 @@ import Tabs from "./Tabs";
 import ThemeToggle from "./ThemeToggle";
 import Uploader from "./Uploader";
 import { extensions } from "../extensions";
-import { SessionExpiredError, getBudgets, listReceipts, saveBudgets } from "../lib/api";
+import { SessionExpiredError, deleteReceipt, getBudgets, listReceipts, saveBudgets } from "../lib/api";
 import { downloadCsv, receiptsToCsv } from "../lib/csv";
 import { DEFAULT_FILTERS, filterReceipts } from "../lib/filters";
 import { buildIndex, buildProducts, compareReceipt, hasLines, summarizeComparison } from "../lib/prices";
@@ -145,6 +145,17 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
     refresh();
   }, [refresh]);
 
+  // A receipt that could not be read has no window to delete it from, so the list rows delete it directly.
+  const deleteUnread = useCallback(async (receipt) => {
+    try {
+      await deleteReceipt(receipt.receiptId);
+    } catch (error) {
+      if (error instanceof SessionExpiredError) onExpired();
+      throw error; // the row shows the message
+    }
+    removed(receipt.receiptId);
+  }, [removed, onExpired]);
+
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "receipts", label: "Receipts", count: ofCurrency?.length },
@@ -208,7 +219,7 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
                 </div>
                 <ReceiptList
                   receipts={ofCurrency && ofCurrency.slice(0, RECENT)} totalCount={ofCurrency?.length}
-                  error={loadError} trends={trends} onOpen={setOpenId}
+                  error={loadError} trends={trends} onOpen={setOpenId} onDelete={deleteUnread}
                 />
               </section>
             </>
@@ -225,7 +236,7 @@ export default function Dashboard({ email, onSignOut, onExpired }) {
               )}
               <ReceiptList
                 receipts={ofCurrency && visible} totalCount={ofCurrency?.length} error={loadError}
-                trends={trends} onOpen={setOpenId} query={filters.query}
+                trends={trends} onOpen={setOpenId} onDelete={deleteUnread} query={filters.query}
               />
             </section>
           )}

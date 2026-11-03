@@ -9,3 +9,4 @@ tfplan
 node_modules/
 frontend/dist/
 frontend/public/config.json
+testdeploy.ps1

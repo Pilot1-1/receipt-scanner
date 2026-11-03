@@ -1,4 +1,5 @@
 import { CATEGORIES, formatMoney, isPending } from "../lib/stats";
+import RowDelete from "./RowDelete";
 import { hasLines } from "../lib/prices";
 import { matchingItems } from "../lib/filters";
 
@@ -25,8 +26,10 @@ function Chips({ trend }) {
  * A list of receipts. `receipts` is what to show (already filtered or shortened); `totalCount` is how many
  * exist, so an empty list can say "nothing yet" or "nothing matches". With a search `query`, the products that
  * matched are shown under the store name, so it is clear why a receipt is in the list.
+ * With `onDelete(receipt)`, a receipt that could not be read (or never arrived) gets a Delete button: it cannot be
+ * opened like the others, so without this it would stay in the list for ever.
  */
-export default function ReceiptList({ receipts, totalCount, error, trends, onOpen, query = "" }) {
+export default function ReceiptList({ receipts, totalCount, error, trends, onOpen, onDelete, query = "" }) {
   const canOpen = (r) => r.status === "done" && typeof r.total === "number";
   const anyLines = receipts?.some(hasLines);
 
@@ -43,6 +46,7 @@ export default function ReceiptList({ receipts, totalCount, error, trends, onOpe
         <ul>
           {receipts.map((r) => {
             const Row = canOpen(r) ? "button" : "div";
+            const deletable = Boolean(onDelete) && !canOpen(r) && !isPending(r); // "Not read" and "Stalled", not "Reading…"
             return (
               <li key={r.receiptId}>
                 <Row className="r-row" {...(canOpen(r) ? { type: "button", onClick: () => onOpen(r.receiptId) } : {})}>
@@ -65,7 +69,10 @@ export default function ReceiptList({ receipts, totalCount, error, trends, onOpe
                       </span>
                     )}
                   </span>
-                  <span className="r-amount"><Amount receipt={r} /></span>
+                  <span className={`r-amount${deletable ? " has-action" : ""}`}>
+                    <Amount receipt={r} />
+                    {deletable && <RowDelete label={`Delete the receipt that could not be read (${(r.createdAt || "").slice(0, 10)})`} onDelete={() => onDelete(r)} />}
+                  </span>
                 </Row>
               </li>
             );
