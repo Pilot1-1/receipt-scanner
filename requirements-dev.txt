@@ -1,0 +1,4 @@
+# Only for running the tests; the Lambdas themselves need nothing beyond what the AWS Python runtime provides.
+# The tests also run without any of these:  python -m unittest discover -s tests -v
+pytest>=8
+boto3>=1.35
