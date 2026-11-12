@@ -1,0 +1,11 @@
+/* Installed app (display: standalone): keep content clear of the notch, the status bar and the home indicator.
+   The values are 0 in a normal browser tab, so nothing changes there. Needs viewport-fit=cover in index.html. */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.theme-corner { top: calc(1rem + env(safe-area-inset-top)); right: calc(1rem + env(safe-area-inset-right)); }
+
+/* Bigger tap targets on a phone */
+@media (max-width: 640px) {
+  .form-actions .primary, .form-actions .ghost { flex: 1 1 9rem; min-height: 2.9rem; }
+}

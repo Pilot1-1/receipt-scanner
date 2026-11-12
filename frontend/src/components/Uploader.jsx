@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { uploadReceipt } from "../lib/api";
 
-/** Always visible above the tabs: a photo or a PDF can be added from any screen. */
+/** Always visible above the tabs: take a photo, or choose a photo or a PDF, from any screen. */
 export default function Uploader({ onUploaded }) {
   const input = useRef(null);
+  const camera = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState({ busy: false, text: "", error: "" });
 
@@ -29,6 +30,11 @@ export default function Uploader({ onUploaded }) {
     handleFiles(event.dataTransfer.files);
   };
 
+  const pick = (event) => {
+    handleFiles(event.target.files);
+    event.target.value = ""; // the same file can be chosen again
+  };
+
   return (
     <section
       className={`panel upload upload-bar${dragging ? " is-dragging" : ""}`}
@@ -39,17 +45,26 @@ export default function Uploader({ onUploaded }) {
     >
       <div className="upload-text">
         <h2 id="add-receipt">Add a receipt</h2>
-        <p className="muted">Take a photo or drop a file here: a photo, or a PDF receipt (for example from Kaspi). Make sure the total is readable.</p>
+        <p className="muted">Take a photo, or choose a photo or a PDF receipt (for example from Kaspi). Make sure the total is readable.</p>
         {status.error && <p className="error" role="alert">{status.error}</p>}
       </div>
 
+      {/* capture="environment" opens the back camera straight away on a phone;
+          on a computer it falls back to the normal file dialog. */}
+      <input ref={camera} type="file" hidden accept="image/*" capture="environment" onChange={pick} />
       <input
         ref={input} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,application/pdf"
-        onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
+        onChange={pick}
       />
-      <button className="primary" disabled={status.busy} onClick={() => input.current.click()}>
-        {status.busy ? status.text : "Choose files"}
-      </button>
+
+      <div className="form-actions">
+        <button className="primary" disabled={status.busy} onClick={() => camera.current.click()}>
+          {status.busy ? status.text : "Take a photo"}
+        </button>
+        <button className="ghost" disabled={status.busy} onClick={() => input.current.click()}>
+          Choose files
+        </button>
+      </div>
     </section>
   );
 }

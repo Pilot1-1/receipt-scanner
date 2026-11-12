@@ -3,7 +3,8 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./styles.css";
 import "./features.css"; // tabs, charts, filters, products, budgets: loaded after styles.css so it can refine it
-import "./theme.css"; // the dark theme, loaded last so it can override
+import "./theme.css"; // the dark theme
+import "./pwa.css"; // safe areas for the installed app, loaded last
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -22,3 +23,11 @@ loadConfig()
       </main>
     )
   );
+
+// Makes the site installable ("Add to Home Screen"). Only in the production build: during "npm run dev"
+// a service worker would serve stale files. Not needed inside a Capacitor APK, where the files are local.
+if ("serviceWorker" in navigator && import.meta.env.PROD && !window.Capacitor) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
